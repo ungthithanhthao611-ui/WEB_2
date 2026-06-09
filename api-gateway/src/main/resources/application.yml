@@ -1,0 +1,49 @@
+server:
+  port: 8900
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/accounts/**
+          filters:
+            - StripPrefix=2
+        - id: product-catalog-service
+          uri: lb://product-catalog-service
+          predicates:
+            - Path=/api/catalog/**
+          filters:
+            - StripPrefix=2
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/shop/**
+          filters:
+            - StripPrefix=2
+        - id: product-recommendation-service
+          uri: lb://product-recommendation-service
+          predicates:
+            - Path=/api/review/**
+          filters:
+            - StripPrefix=2
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka

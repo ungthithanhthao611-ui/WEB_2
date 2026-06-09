@@ -1,0 +1,556 @@
+.highlands-home {
+    --primary: #b22830;
+    --primary-hover: #911f25;
+    --secondary: #53382c;
+    --text-dark: #333333;
+    --text-light: #666666;
+    --bg-light: #f9f9f9;
+    --white: #ffffff;
+    --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 10px 20px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.12);
+    --radius-md: 12px;
+    --radius-lg: 24px;
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+    font-family: 'Outfit', sans-serif;
+    color: var(--text-dark);
+    background-color: var(--bg-light);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+.highlands-home a {
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition);
+}
+
+.highlands-home ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.highlands-home .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Typography */
+.highlands-home h1, .highlands-home h2, .highlands-home h3, .highlands-home h4 {
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.highlands-home h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.highlands-home h2 span {
+    color: var(--primary);
+}
+
+/* Header */
+.highlands-home header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    transition: var(--transition);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-sm);
+}
+
+.highlands-home header.scrolled {
+    padding: 5px 0;
+}
+
+.highlands-home .header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.highlands-home .logo img {
+    height: 50px;
+    transition: var(--transition);
+}
+
+.highlands-home header.scrolled .logo img {
+    height: 40px;
+}
+
+.highlands-home .nav-menu, .highlands-home .nav-tools {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-bottom: 0;
+}
+
+.highlands-home .nav-menu a {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.95rem;
+    position: relative;
+    padding: 5px 0;
+}
+
+.highlands-home .nav-menu a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--primary);
+    transition: var(--transition);
+}
+
+.highlands-home .nav-menu a:hover::after {
+    width: 100%;
+}
+
+.highlands-home .nav-tools a {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.highlands-home .nav-tools a:hover {
+    color: var(--primary);
+}
+
+.highlands-home .btn-delivery {
+    background-color: var(--primary);
+    color: var(--white) !important;
+    padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: 0 4px 10px rgba(178, 40, 48, 0.3);
+}
+
+.highlands-home .btn-delivery:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(178, 40, 48, 0.4);
+}
+
+.highlands-home .lang img {
+    width: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.highlands-home .menu-toggle {
+    display: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--primary);
+}
+
+/* Hero Slider */
+.highlands-home .hero-slider {
+    position: relative;
+    height: 100vh;
+    min-height: 600px;
+    overflow: hidden;
+    margin-top: 80px;
+}
+
+.highlands-home .slider-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.highlands-home .slide {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+}
+
+.highlands-home .slide.active {
+    opacity: 1;
+}
+
+.highlands-home .slider-nav {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 30px;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.highlands-home .slider-nav button {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.8);
+    border: none;
+    font-size: 1.2rem;
+    color: var(--primary);
+    cursor: pointer;
+    transition: var(--transition);
+    backdrop-filter: blur(5px);
+}
+
+.highlands-home .slider-nav button:hover {
+    background: var(--primary);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.highlands-home .slider-dots {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+}
+
+.highlands-home .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.highlands-home .dot.active {
+    background: var(--white);
+    transform: scale(1.2);
+}
+
+/* Sections */
+.highlands-home .section {
+    padding: 80px 0;
+}
+
+.highlands-home .section-title {
+    text-align: center;
+    margin-bottom: 50px;
+    font-size: 2.5rem;
+    color: var(--secondary);
+    position: relative;
+    display: inline-block;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.highlands-home .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 4px;
+    background-color: var(--primary);
+    border-radius: 2px;
+}
+
+/* Cards */
+.highlands-home .card-horizontal {
+    display: flex;
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition);
+}
+
+.highlands-home .card-horizontal:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-5px);
+}
+
+.highlands-home .card-horizontal.reversed {
+    flex-direction: row-reverse;
+}
+
+.highlands-home .card-image {
+    flex: 1;
+    overflow: hidden;
+}
+
+.highlands-home .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.highlands-home .card-horizontal:hover .card-image img {
+    transform: scale(1.05);
+}
+
+.highlands-home .card-content {
+    flex: 1;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.highlands-home .card-content p {
+    font-size: 1.2rem;
+    color: var(--text-light);
+    margin-bottom: 30px;
+}
+
+.highlands-home .btn {
+    display: inline-block;
+    padding: 15px 35px;
+    border-radius: 30px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+}
+
+.highlands-home .btn-primary {
+    background-color: var(--primary);
+    color: var(--white);
+    box-shadow: 0 5px 15px rgba(178, 40, 48, 0.4);
+}
+
+.highlands-home .btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(178, 40, 48, 0.5);
+    color: var(--white);
+}
+
+/* Grids */
+.highlands-home .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.highlands-home .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+}
+
+/* Vertical Cards */
+.highlands-home .card {
+    background: var(--white);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    cursor: pointer;
+    border: none;
+}
+
+.highlands-home .card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-10px);
+}
+
+.highlands-home .card-image-wrap {
+    width: 100%;
+    height: 350px;
+    overflow: hidden;
+}
+
+.highlands-home .card-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.highlands-home .card:hover .card-image-wrap img {
+    transform: scale(1.1);
+}
+
+.highlands-home .card-title {
+    padding: 25px;
+    text-align: center;
+}
+
+.highlands-home .card-title h3 {
+    font-size: 1.2rem;
+    color: var(--secondary);
+    transition: var(--transition);
+    margin: 0;
+}
+
+.highlands-home .card:hover .card-title h3 {
+    color: var(--primary);
+}
+
+/* Product Cards */
+.highlands-home .product-card {
+    position: relative;
+    border-radius: var(--radius-lg);
+}
+
+.highlands-home .product-card .card-image-wrap {
+    height: 450px;
+}
+
+.highlands-home .product-card .card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 40px 30px 30px;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: var(--white);
+    border-bottom-left-radius: var(--radius-lg);
+    border-bottom-right-radius: var(--radius-lg);
+}
+
+.highlands-home .product-card .card-overlay h3 {
+    font-size: 1.8rem;
+    transform: translateY(10px);
+    transition: var(--transition);
+    color: white;
+}
+
+.highlands-home .product-card:hover .card-overlay h3 {
+    transform: translateY(0);
+}
+
+/* Footer */
+.highlands-home footer {
+    background-color: #2c1e16;
+    color: #fff;
+    padding: 80px 0 30px;
+    margin-top: 50px;
+}
+
+.highlands-home .footer-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 50px;
+}
+
+.highlands-home .footer-brand img {
+    width: 120px;
+}
+
+.highlands-home .footer-links h4, .highlands-home .footer-social h4 {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+    position: relative;
+    padding-bottom: 10px;
+}
+
+.highlands-home .footer-links h4::after, .highlands-home .footer-social h4::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 40px;
+    height: 3px;
+    background-color: var(--primary);
+}
+
+.highlands-home .footer-links ul li {
+    margin-bottom: 15px;
+}
+
+.highlands-home .footer-links ul li a {
+    color: #cccccc;
+    transition: var(--transition);
+}
+
+.highlands-home .footer-links ul li a:hover {
+    color: var(--white);
+    padding-left: 5px;
+}
+
+.highlands-home .social-icons {
+    display: flex;
+    gap: 15px;
+}
+
+.highlands-home .social-icons a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.highlands-home .social-icons a:hover {
+    background-color: var(--primary);
+    transform: translateY(-3px);
+}
+
+.highlands-home .footer-bottom {
+    text-align: center;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    color: #999999;
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .highlands-home .grid-3, .highlands-home .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .highlands-home .footer-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .highlands-home .nav-menu, .highlands-home .nav-tools {
+        display: none;
+    }
+    .highlands-home .menu-toggle {
+        display: block;
+    }
+    .highlands-home .card-horizontal, .highlands-home .card-horizontal.reversed {
+        flex-direction: column;
+    }
+    .highlands-home .card-content {
+        padding: 40px 20px;
+    }
+    .highlands-home .grid-3, .highlands-home .grid-2, .highlands-home .footer-grid {
+        grid-template-columns: 1fr;
+    }
+    .highlands-home .hero-slider {
+        height: 60vh;
+        min-height: 400px;
+    }
+    .highlands-home .section-title {
+        font-size: 2rem;
+    }
+    .highlands-home h2 {
+        font-size: 2rem;
+    }
+}

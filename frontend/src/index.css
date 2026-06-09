@@ -1,0 +1,133 @@
+:root {
+  --primary-color: #e30613; /* Màu đỏ MyKingdom */
+  --primary-hover: #c4040e;
+  --secondary-color: #ffc600; /* Màu vàng MyKingdom */
+  --secondary-hover: #e0ae00;
+  --light-bg: #f8f9fa;
+  --dark-text: #212529;
+  --light-text: #fff;
+  --gray-text: #6c757d;
+  --card-radius: 20px;
+  --btn-radius: 50px;
+  --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow-premium: 0 10px 30px rgba(227, 6, 19, 0.05), 0 5px 15px rgba(0, 0, 0, 0.03);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  background-color: var(--light-bg);
+  color: var(--dark-text);
+  overflow-x: hidden;
+}
+
+/* Khắc phục giới hạn kích thước root của Vite mặc định */
+#root {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  text-align: left !important;
+  border-inline: none !important;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hiệu ứng chuyển động mượt mà cho các card đồ chơi */
+.toy-card {
+  border: none !important;
+  border-radius: var(--card-radius) !important;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: var(--shadow-premium);
+  transition: var(--transition-smooth);
+}
+
+.toy-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 15px 35px rgba(227, 6, 19, 0.15), 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.toy-badge-discount {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  background-color: var(--primary-color);
+  color: var(--light-text);
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 30px 10px 30px 10px;
+  font-size: 0.9rem;
+  z-index: 2;
+  box-shadow: 0 4px 10px rgba(227, 6, 19, 0.3);
+}
+
+/* Các nút bấm phong cách MyKingdom bo tròn lớn */
+.btn-toy-primary {
+  background-color: var(--primary-color) !important;
+  color: var(--light-text) !important;
+  border: none !important;
+  font-weight: 700 !important;
+  border-radius: var(--btn-radius) !important;
+  padding: 10px 24px !important;
+  transition: var(--transition-smooth) !important;
+  box-shadow: 0 4px 15px rgba(227, 6, 19, 0.2);
+}
+
+.btn-toy-primary:hover {
+  background-color: var(--primary-hover) !important;
+  transform: scale(1.03);
+  box-shadow: 0 6px 20px rgba(227, 6, 19, 0.3);
+}
+
+.btn-toy-secondary {
+  background-color: var(--secondary-color) !important;
+  color: #000 !important;
+  border: none !important;
+  font-weight: 700 !important;
+  border-radius: var(--btn-radius) !important;
+  padding: 10px 24px !important;
+  transition: var(--transition-smooth) !important;
+  box-shadow: 0 4px 15px rgba(255, 198, 0, 0.2);
+}
+
+.btn-toy-secondary:hover {
+  background-color: var(--secondary-hover) !important;
+  transform: scale(1.03);
+  box-shadow: 0 6px 20px rgba(255, 198, 0, 0.3);
+}
+
+/* Mega Menu / Categories style */
+.category-circle {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+  box-shadow: var(--shadow-premium);
+  transition: var(--transition-smooth);
+  border: 3px solid transparent;
+}
+
+.category-item:hover .category-circle {
+  border-color: var(--primary-color);
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 10px 25px rgba(227, 6, 19, 0.1);
+}
+
+/* Form input bo tròn viền đỏ khi focus */
+.form-toy-control {
+  border-radius: 20px !important;
+  padding: 12px 20px !important;
+  border: 2px solid #e2e8f0 !important;
+  transition: var(--transition-smooth) !important;
+}
+
+.form-toy-control:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(227, 6, 19, 0.15) !important;
+}
