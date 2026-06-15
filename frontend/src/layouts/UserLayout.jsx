@@ -4,7 +4,7 @@ function UserLayout({ children }) {
   return (
     <div className="d-flex flex-column min-vh-100">
       <Navbar />
-      <main className="flex-grow-1 container pb-5">
+      <main className="flex-grow-1 container pb-5 user-layout-content">
         {children}
       </main>
       <footer className="bg-dark text-white text-center py-3 mt-auto">

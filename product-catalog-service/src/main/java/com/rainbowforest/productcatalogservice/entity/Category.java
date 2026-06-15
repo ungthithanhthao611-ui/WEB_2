@@ -20,6 +20,12 @@ public class Category {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    @Column(name = "admin_managed")
+    private boolean adminManaged = false;
+
     public Category() {
     }
 
@@ -50,5 +56,21 @@ public class Category {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public boolean isAdminManaged() {
+        return adminManaged;
+    }
+
+    public void setAdminManaged(boolean adminManaged) {
+        this.adminManaged = adminManaged;
     }
 }

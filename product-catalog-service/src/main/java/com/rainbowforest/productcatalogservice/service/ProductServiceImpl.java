@@ -36,6 +36,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Product addProduct(Product product) {
+        product.setAdminManaged(true);
         return productRepository.save(product);
     }
 
@@ -58,5 +59,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public void deleteProduct(Long productId) {
         productRepository.deleteById(productId);
+    }
+
+    @Override
+    public List<Product> getAdminManagedProducts() {
+        return productRepository.findAllByAdminManagedTrue();
     }
 }

@@ -1,77 +1,74 @@
 import { useEffect, useState } from "react";
-import { getCategories, createCategory, updateCategory, deleteCategory } from "../../services/productService";
+import {
+  getAdminCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+} from "../../services/productService";
 import AdminLayout from "../../layouts/AdminLayout";
+import { showToast } from "../../services/shopConfigService";
+
+const EMPTY_FORM = { name: "", description: "", imageUrl: "" };
 
 function AdminCategoryPage() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-  });
-  
-  // State phục vụ Edit
+  const [formMode, setFormMode] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
 
   const loadCategories = async () => {
     try {
-      const res = await getCategories();
-      setCategories(res.data);
+      const res = await getAdminCategories();
+      setCategories(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Lỗi lấy danh mục:", error);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setEditingCategory(null);
+    setFormMode(null);
+  };
+
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleEditChange = (e) => {
-    setEditForm({
-      ...editForm,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    try {
-      await createCategory(form);
-      alert("Thêm danh mục thành công!");
-      setForm({ name: "", description: "" });
-      loadCategories();
-    } catch (error) {
-      alert("Thêm danh mục thất bại!");
-      console.error(error);
-    }
+  const handleOpenCreate = () => {
+    setForm(EMPTY_FORM);
+    setEditingCategory(null);
+    setFormMode("create");
   };
 
   const handleStartEdit = (cat) => {
     setEditingCategory(cat);
-    setEditForm({
+    setForm({
       name: cat.name,
       description: cat.description || "",
+      imageUrl: cat.imageUrl || "",
     });
+    setFormMode("edit");
   };
 
-  const handleUpdate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await updateCategory(editingCategory.id, editForm);
-      alert("Cập nhật danh mục thành công!");
-      setEditingCategory(null);
+      if (formMode === "create") {
+        await createCategory(form);
+        showToast("Thêm danh mục thành công!");
+      } else {
+        await updateCategory(editingCategory.id, form);
+        showToast("Cập nhật danh mục thành công!");
+      }
+      resetForm();
       loadCategories();
     } catch (error) {
-      alert("Cập nhật danh mục thất bại!");
+      showToast(formMode === "create" ? "Thêm danh mục thất bại!" : "Cập nhật danh mục thất bại!", "error");
       console.error(error);
     }
   };
@@ -80,10 +77,10 @@ function AdminCategoryPage() {
     if (!window.confirm("Bạn có chắc chắn muốn xóa danh mục này?")) return;
     try {
       await deleteCategory(id);
-      alert("Xóa danh mục thành công!");
+      showToast("Xóa danh mục thành công!");
       loadCategories();
     } catch (error) {
-      alert("Xóa danh mục thất bại!");
+      showToast("Xóa danh mục thất bại!", "error");
       console.error(error);
     }
   };
@@ -94,109 +91,82 @@ function AdminCategoryPage() {
 
   return (
     <AdminLayout>
-      <div className="container mt-4">
-        <h2 className="fw-bold mb-4">Quản Lý Danh Mục</h2>
-
-        <div className="row">
-          {/* Cột trái: Form Thêm */}
-          <div className="col-lg-4 mb-4">
-            <form onSubmit={handleCreate} className="card shadow-sm border-0 rounded-4 p-4">
-              <h5 className="fw-bold text-primary mb-3">Thêm danh mục mới</h5>
-              <div className="mb-3">
-                <label className="form-label fw-semibold">Tên danh mục</label>
-                <input
-                  name="name"
-                  type="text"
-                  className="form-control rounded-3"
-                  value={form.name}
-                  onChange={handleChange}
-                  placeholder="Ví dụ: LEGO Lắp Ráp"
-                  required
-                />
-              </div>
-              <div className="mb-3">
-                <label className="form-label fw-semibold">Mô tả danh mục</label>
-                <textarea
-                  name="description"
-                  className="form-control rounded-3"
-                  rows="3"
-                  value={form.description}
-                  onChange={handleChange}
-                  placeholder="Mô tả ngắn về danh mục này..."
-                ></textarea>
-              </div>
-              <button type="submit" className="btn btn-primary w-100 py-2.5 rounded-3 fw-bold mt-2">
-                <i className="fa-solid fa-plus me-1"></i> Lưu Danh Mục
-              </button>
-            </form>
-          </div>
-
-          {/* Cột phải: Danh sách danh mục */}
-          <div className="col-lg-8">
-            <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
-              {loading ? (
-                <div className="text-center my-5">
-                  <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Đang tải...</span>
-                  </div>
-                </div>
-              ) : categories.length === 0 ? (
-                <div className="text-center my-5 text-muted">Chưa có danh mục nào được tạo.</div>
-              ) : (
-                <table className="table table-hover align-middle mb-0">
-                  <thead className="table-light">
-                    <tr>
-                      <th className="px-4 py-3" style={{ width: "80px" }}>ID</th>
-                      <th className="py-3" style={{ width: "220px" }}>Tên danh mục</th>
-                      <th className="py-3">Mô tả</th>
-                      <th className="py-3 text-center" style={{ width: "180px" }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categories.map((cat) => (
-                      <tr key={cat.id}>
-                        <td className="px-4 py-3 fw-bold">#{cat.id}</td>
-                        <td className="py-3 fw-semibold text-dark">{cat.name}</td>
-                        <td className="py-3 text-muted text-truncate" style={{ maxWidth: "250px" }}>
-                          {cat.description || "Không có mô tả"}
-                        </td>
-                        <td className="py-3 text-center">
-                          <button
-                            className="btn btn-outline-primary btn-sm rounded-3 px-2.5 me-2"
-                            onClick={() => handleStartEdit(cat)}
-                          >
-                            <i className="fa-solid fa-pen-to-square me-1"></i> Sửa
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm rounded-3 px-2.5"
-                            onClick={() => handleDelete(cat.id)}
-                          >
-                            <i className="fa-solid fa-trash-can me-1"></i> Xóa
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
+      <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h2 className="fw-bold mb-1">Quản Lý Danh Mục</h2>
+          <p className="text-muted mb-0">Chỉ hiển thị danh mục do admin thêm vào hệ thống</p>
         </div>
+        <button
+          className="btn btn-danger rounded-pill px-4 py-2 fw-bold"
+          onClick={handleOpenCreate}
+        >
+          <i className="fa-solid fa-plus me-2"></i>Thêm danh mục
+        </button>
       </div>
 
-      {/* Modal chỉnh sửa Danh mục */}
-      {editingCategory && (
+      <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
+        {loading ? (
+          <div className="text-center my-5">
+            <div className="spinner-border text-danger" role="status">
+              <span className="visually-hidden">Đang tải...</span>
+            </div>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="text-center my-5 py-4 text-muted">
+            <i className="fa-solid fa-layer-group fs-1 mb-3 d-block opacity-50"></i>
+            Chưa có danh mục nào. Bấm <strong>Thêm danh mục</strong> để bắt đầu.
+          </div>
+        ) : (
+          <table className="table table-hover align-middle mb-0">
+            <thead className="table-light">
+              <tr>
+                <th className="px-4 py-3" style={{ width: "80px" }}>ID</th>
+                <th className="py-3" style={{ width: "220px" }}>Tên danh mục</th>
+                <th className="py-3" style={{ width: "100px" }}>Hình ảnh</th>
+                <th className="py-3">Mô tả</th>
+                <th className="py-3 text-center" style={{ width: "180px" }}>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {categories.map((cat) => (
+                <tr key={cat.id}>
+                  <td className="px-4 py-3 fw-bold">#{cat.id}</td>
+                  <td className="py-3 fw-semibold text-dark">{cat.name}</td>
+                  <td className="py-3"><img src={cat.imageUrl || "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=200"} alt={cat.name} width="64" height="48" className="rounded-3" style={{objectFit:"cover"}} /></td>
+                  <td className="py-3 text-muted text-truncate" style={{ maxWidth: "400px" }}>
+                    {cat.description || "Không có mô tả"}
+                  </td>
+                  <td className="py-3 text-center">
+                    <button
+                      className="btn btn-outline-danger btn-sm rounded-3 px-2.5 me-2"
+                      onClick={() => handleStartEdit(cat)}
+                    >
+                      <i className="fa-solid fa-pen-to-square me-1"></i> Sửa
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm rounded-3 px-2.5"
+                      onClick={() => handleDelete(cat.id)}
+                    >
+                      <i className="fa-solid fa-trash-can me-1"></i> Xóa
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {formMode && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content border-0 rounded-4 shadow-lg">
-              <form onSubmit={handleUpdate}>
+              <form onSubmit={handleSubmit}>
                 <div className="modal-header border-bottom-0 pt-4 px-4 pb-2">
-                  <h5 className="modal-title fw-bold text-dark">Chỉnh Sửa Danh Mục</h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setEditingCategory(null)}
-                  ></button>
+                  <h5 className="modal-title fw-bold text-dark">
+                    {formMode === "create" ? "Thêm Danh Mục Mới" : "Chỉnh Sửa Danh Mục"}
+                  </h5>
+                  <button type="button" className="btn-close" onClick={resetForm}></button>
                 </div>
                 <div className="modal-body px-4 py-3">
                   <div className="mb-3">
@@ -205,10 +175,16 @@ function AdminCategoryPage() {
                       name="name"
                       type="text"
                       className="form-control rounded-3"
-                      value={editForm.name}
-                      onChange={handleEditChange}
+                      value={form.name}
+                      onChange={handleChange}
+                      placeholder="Ví dụ: Bánh Ngọt, Cà Phê, Trà"
                       required
                     />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label fw-semibold">Ảnh danh mục (URL)</label>
+                    <input name="imageUrl" type="url" className="form-control rounded-3" value={form.imageUrl} onChange={handleChange} placeholder="https://..." required />
+                    {form.imageUrl && <img src={form.imageUrl} alt="Xem trước" className="mt-2 rounded-3 w-100" style={{height:140,objectFit:"cover"}} />}
                   </div>
                   <div className="mb-3">
                     <label className="form-label fw-semibold">Mô tả danh mục</label>
@@ -216,8 +192,9 @@ function AdminCategoryPage() {
                       name="description"
                       className="form-control rounded-3"
                       rows="3"
-                      value={editForm.description}
-                      onChange={handleEditChange}
+                      value={form.description}
+                      onChange={handleChange}
+                      placeholder="Mô tả ngắn về danh mục này..."
                     ></textarea>
                   </div>
                 </div>
@@ -225,12 +202,12 @@ function AdminCategoryPage() {
                   <button
                     type="button"
                     className="btn btn-light rounded-3 px-4 py-2 fw-semibold"
-                    onClick={() => setEditingCategory(null)}
+                    onClick={resetForm}
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn btn-primary rounded-3 px-4 py-2 fw-bold">
-                    Cập Nhật
+                  <button type="submit" className="btn btn-danger rounded-3 px-4 py-2 fw-bold">
+                    {formMode === "create" ? "Lưu Danh Mục" : "Cập Nhật"}
                   </button>
                 </div>
               </form>

@@ -25,13 +25,13 @@ spring:
           filters:
             - StripPrefix=2
         - id: product-catalog-service
-          uri: lb://product-catalog-service
+          uri: http://localhost:8810
           predicates:
             - Path=/api/catalog/**
           filters:
             - StripPrefix=2
         - id: order-service
-          uri: lb://order-service
+          uri: http://localhost:8813
           predicates:
             - Path=/api/shop/**
           filters:

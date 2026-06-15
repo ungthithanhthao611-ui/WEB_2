@@ -1,20 +1,27 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getProducts } from "../../services/productService";
+import { getCategories, getProducts } from "../../services/productService";
 import { addToCart } from "../../services/cartService";
+import Navbar from "../../components/Navbar";
+import { notifyCartChanged, showToast } from "../../services/shopConfigService";
+import { fetchBanners } from "../../services/commerceService";
 import "./HomePage.css"; 
 
 function HomePage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
+  const [heroBanners, setHeroBanners] = useState([]);
+  const [campaigns, setCampaigns] = useState([]);
 
   // For slider
   const [currentSlide, setCurrentSlide] = useState(0);
-  const slides = [
+  const defaultSlides = [
     "https://www.highlandscoffee.com.vn/vnt_upload/weblink/2025/HCO_7825_SUMMERDI_DC_BANNER_1920x926.jpg",
     "https://www.highlandscoffee.com.vn/vnt_upload/weblink/HCO_7801_MISMATCHES_DISCOUNT_FA_MWB_1920x926_1.png",
     "https://www.highlandscoffee.com.vn/vnt_upload/weblink/HCO_7820_MATCHA_LAUNCH_DC_MWB_1920X926.jpg"
   ];
+  const slides = heroBanners.length ? heroBanners : defaultSlides.map((imageUrl,index)=>({id:`default-${index}`,imageUrl,link:"/products"}));
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -25,8 +32,9 @@ function HomePage() {
 
   const loadProducts = async () => {
     try {
-      const res = await getProducts();
+      const [res, categoryRes] = await Promise.all([getProducts(), getCategories()]);
       setProducts(res.data.slice(0, 4)); // Lấy 4 sản phẩm
+      setCategories(categoryRes.data || []);
     } catch (error) {
       console.error("Lỗi lấy sản phẩm nổi bật:", error);
     } finally {
@@ -37,76 +45,43 @@ function HomePage() {
   const handleAddToCart = async (productId) => {
     const userId = sessionStorage.getItem("userId");
     if (!userId) {
-      alert("Vui lòng đăng nhập trước khi mua hàng!");
+      showToast("Vui lòng đăng nhập trước khi mua hàng!", "error");
       return;
     }
     try {
       await addToCart(productId, 1);
-      alert("Đã thêm sản phẩm vào giỏ hàng thành công!");
+      notifyCartChanged();
+      showToast("Đã thêm sản phẩm vào giỏ hàng");
     } catch (error) {
-      alert("Thêm vào giỏ hàng thất bại!");
+      showToast("Thêm vào giỏ hàng thất bại!", "error");
       console.error(error);
     }
   };
 
   useEffect(() => {
     loadProducts();
-    
-    // Header scroll effect
-    const handleScroll = () => {
-      const header = document.getElementById('highlands-header');
-      if (header) {
-        if (window.scrollY > 50) {
-          header.classList.add('scrolled');
-        } else {
-          header.classList.remove('scrolled');
-        }
-      }
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    fetchBanners().then(({data}) => {
+      setHeroBanners(data.filter(item => item.position === "HERO"));
+      setCampaigns(data.filter(item => item.position !== "HERO"));
+    }).catch(console.error);
   }, []);
 
   return (
     <div className="highlands-home">
-      <header id="highlands-header">
-          <div className="header-container">
-              <div className="nav-left">
-                  <ul className="nav-menu">
-                      <li><Link to="/products">Thực Đơn</Link></li>
-                      <li><a href="#">Về Highlands</a></li>
-                      <li><a href="#">Tin tức</a></li>
-                      <li><a href="#">Hỗ Trợ</a></li>
-                  </ul>
-              </div>
-              <div className="logo">
-                  <Link to="/">
-                      <img src="https://www.highlandscoffee.com.vn/vnt_upload/weblink/red_BG_logo800.png" alt="Highlands Coffee" />
-                  </Link>
-              </div>
-              <div className="nav-right">
-                  <ul className="nav-tools">
-                      <li><Link to="/cart" className="btn-delivery">Giỏ hàng</Link></li>
-                      <li><Link to="/login"><i className="fa-solid fa-user"></i> Tài khoản</Link></li>
-                      <li className="lang"><img src="https://www.highlandscoffee.com.vn/vnt_upload/lang/flag-vn.jpg" alt="VN" /></li>
-                  </ul>
-              </div>
-              <div className="menu-toggle" onClick={() => alert("Chức năng menu mobile đang hoàn thiện.")}>
-                  <i className="fa-solid fa-bars"></i>
-              </div>
-          </div>
-      </header>
+      <Navbar />
 
       <main>
           {/* Hero Slider */}
           <section className="hero-slider">
               <div className="slider-container">
                   {slides.map((slide, index) => (
-                    <div 
-                      key={index}
+                    <Link
+                      to={slide.link || "/products"}
+                      key={slide.id || index}
                       className={`slide ${index === currentSlide ? 'active' : ''}`} 
-                      style={{ backgroundImage: `url('${slide}')` }}
-                    ></div>
+                      style={{ backgroundImage: `url('${slide.imageUrl}')` }}
+                      aria-label={slide.title || `Banner ${index + 1}`}
+                    ></Link>
                   ))}
               </div>
               <div className="slider-nav">
@@ -144,62 +119,28 @@ function HomePage() {
               </div>
           </section>
 
-          {/* Companion Section */}
-          <section className="section companion-section">
+          <section className="section campaign-section">
               <div className="container">
-                  <h2 className="section-title">Đồng Hành Cùng Highlands</h2>
-                  <div className="grid-3">
-                      <div className="card">
-                          <div className="card-image-wrap">
-                              <img src="https://www.highlandscoffee.com.vn/vnt_upload/home/WEB_Banner.png" alt="HIGHLANDS REWARDS" />
-                          </div>
-                          <div className="card-title">
-                              <h3>HIGHLANDS REWARDS</h3>
-                          </div>
-                      </div>
-                      <div className="card">
-                          <div className="card-image-wrap">
-                              <img src="https://www.highlandscoffee.com.vn/vnt_upload/home/bbimg2.jpg" alt="THẺ HIGHLANDS" />
-                          </div>
-                          <div className="card-title">
-                              <h3>THẺ HIGHLANDS</h3>
-                          </div>
-                      </div>
-                      <div className="card">
-                          <div className="card-image-wrap">
-                              <img src="https://www.highlandscoffee.com.vn/vnt_upload/home/505392773_1120548066764868_2724070916068790506_n.jpg" alt="CƠ HỘI NGHỀ NGHIỆP" />
-                          </div>
-                          <div className="card-title">
-                              <h3>CƠ HỘI NGHỀ NGHIỆP</h3>
-                          </div>
-                      </div>
-                  </div>
+                  <div className="campaign-heading"><div><span className="section-kicker">HIGHLANDS STORIES</span><h2>Mùa Hè Đậm Vị, Trọn Từng Khoảnh Khắc</h2><p>Khám phá ưu đãi giới hạn, món mới theo mùa và những trải nghiệm được tuyển chọn riêng cho bạn.</p></div><Link to="/vouchers">Xem tất cả ưu đãi <i className="fa-solid fa-arrow-right"></i></Link></div>
+                  <div className="campaign-grid">{campaigns.slice(0,3).map((campaign,index)=><Link to={campaign.link||"/products"} className={`campaign-card ${(campaign.featured||index===0)?"campaign-large":""}`} key={campaign.id}><img src={campaign.imageUrl} alt={campaign.title}/><div className="campaign-content"><span>{campaign.label}</span><h3>{campaign.title}</h3><p>{campaign.description}</p>{index===0&&<b>Khám phá ngay <i className="fa-solid fa-arrow-right"></i></b>}</div></Link>)}</div>
               </div>
           </section>
 
           {/* Products Highlight (Dynamic) */}
           <section className="section products-section">
               <div className="container">
-                  <h2 className="section-title">Khám Phá Thực Đơn</h2>
+                  <span className="section-kicker d-block text-center">MENU COLLECTION</span><h2 className="section-title">Khám Phá Thực Đơn</h2>
                   {loading ? (
                     <div style={{textAlign: 'center', padding: '50px 0'}}>Đang tải sản phẩm...</div>
                   ) : (
                     <div className="grid-2">
-                        {products.length > 0 ? products.map(p => (
-                          <div className="card product-card" key={p.id}>
+                        {categories.length > 0 ? categories.map(category => (
+                          <Link to={`/products?category=${category.id}`} className="card product-card category-showcase" key={category.id}>
                               <div className="card-image-wrap">
-                                  <img src={p.imageUrl || "https://www.highlandscoffee.com.vn/vnt_upload/home/web_banner_2000x2000.jpg"} alt={p.name} />
+                                  <img src={category.imageUrl || "https://www.highlandscoffee.com.vn/vnt_upload/home/web_banner_2000x2000.jpg"} alt={category.name} />
                               </div>
-                              <div className="card-overlay" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '20px' }}>
-                                  <h3 style={{ marginBottom: '10px' }}>{p.name}</h3>
-                                  <p style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '15px' }}>{p.price.toLocaleString("vi-VN")} VNĐ</p>
-                                  <div>
-                                    <button onClick={() => handleAddToCart(p.id)} className="btn btn-primary" style={{ padding: '10px 20px', fontSize: '0.9rem' }}>
-                                      <i className="fa-solid fa-cart-plus"></i> Chọn Mua
-                                    </button>
-                                  </div>
-                              </div>
-                          </div>
+                              <div className="card-overlay"><span>KHÁM PHÁ</span><h3>{category.name}</h3><p>{category.description || "Thưởng thức hương vị Highlands theo cách của bạn"}</p><b>Xem sản phẩm <i className="fa-solid fa-arrow-right"></i></b></div>
+                          </Link>
                         )) : (
                           <>
                             <div className="card product-card">

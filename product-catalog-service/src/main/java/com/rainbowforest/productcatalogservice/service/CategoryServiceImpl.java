@@ -26,6 +26,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public Category addCategory(Category category) {
+        category.setAdminManaged(true);
         return categoryRepository.save(category);
     }
 
@@ -35,6 +36,7 @@ public class CategoryServiceImpl implements CategoryService {
         if (category != null) {
             category.setName(categoryDetails.getName());
             category.setDescription(categoryDetails.getDescription());
+            category.setImageUrl(categoryDetails.getImageUrl());
             return categoryRepository.save(category);
         }
         return null;
@@ -43,5 +45,10 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     public void deleteCategory(Long id) {
         categoryRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Category> getAdminManagedCategories() {
+        return categoryRepository.findAllByAdminManagedTrue();
     }
 }

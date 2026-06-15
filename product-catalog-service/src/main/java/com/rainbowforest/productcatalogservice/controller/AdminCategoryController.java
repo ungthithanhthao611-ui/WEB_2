@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/admin")
 public class AdminCategoryController {
@@ -18,6 +20,15 @@ public class AdminCategoryController {
 
     @Autowired
     private HeaderGenerator headerGenerator;
+
+    @GetMapping("/categories")
+    public ResponseEntity<List<Category>> getAdminCategories() {
+        List<Category> categories = categoryService.getAdminManagedCategories();
+        return new ResponseEntity<>(
+                categories,
+                headerGenerator.getHeadersForSuccessGetMethod(),
+                HttpStatus.OK);
+    }
 
     @PostMapping("/categories")
     public ResponseEntity<Category> addCategory(@RequestBody Category category, HttpServletRequest request) {

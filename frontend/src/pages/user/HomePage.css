@@ -127,6 +127,33 @@
     color: var(--primary);
 }
 
+.highlands-home .account-link,
+.highlands-home .logout-link {
+    border: 0;
+    background: transparent;
+    color: var(--text-dark);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    transition: var(--transition);
+}
+
+.highlands-home .account-link:hover,
+.highlands-home .logout-link:hover {
+    color: var(--primary);
+}
+
+.user-layout-content {
+    padding-top: 94px;
+}
+
+.cart-count-badge { position:absolute; top:-9px; right:-9px; min-width:22px; height:22px; padding:0 6px; border-radius:20px; background:#ffd43b; color:#7a151b; border:2px solid white; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; }
+.app-toast { position:fixed; z-index:3000; top:105px; right:24px; background:#fff; color:#333; border-left:5px solid #198754; box-shadow:0 10px 30px rgba(0,0,0,.18); border-radius:10px; padding:14px 18px; display:flex; gap:10px; align-items:center; animation:toast-in .25s ease; }
+.app-toast.error { border-left-color:#dc3545; }
+.app-toast i { color:#198754; }.app-toast.error i { color:#dc3545; }
+@keyframes toast-in { from { transform:translateX(25px); opacity:0; } to { transform:none; opacity:1; } }
+
 .highlands-home .btn-delivery {
     background-color: var(--primary);
     color: var(--white) !important;
@@ -267,6 +294,33 @@
     background-color: var(--primary);
     border-radius: 2px;
 }
+
+.highlands-home .section-kicker { color:#b22830; font-size:.75rem; font-weight:800; letter-spacing:2.5px; margin-bottom:10px; }
+.highlands-home .campaign-section { background:linear-gradient(135deg,#fff1f4 0%,#fff8e8 48%,#eaf8f2 100%); color:#53382c; }
+.highlands-home .campaign-heading { display:flex; justify-content:space-between; align-items:end; gap:30px; margin-bottom:38px; }
+.highlands-home .campaign-heading h2 { font-size:2.65rem; max-width:720px; margin:4px 0 12px; color:#53382c; }
+.highlands-home .campaign-heading p { max-width:700px; color:#80685d; margin:0; }
+.highlands-home .campaign-heading>a { color:#b22830; font-weight:700; white-space:nowrap; }
+.highlands-home .campaign-grid { display:grid; grid-template-columns:1.35fr 1fr; grid-template-rows:repeat(2,260px); gap:20px; }
+.highlands-home .campaign-card { position:relative; overflow:hidden; border-radius:26px; color:white; min-height:0; box-shadow:0 18px 45px rgba(103,68,51,.13); border:6px solid rgba(255,255,255,.75); }
+.highlands-home .campaign-large { grid-row:1/3; }
+.highlands-home .campaign-card:after { content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 20%,rgba(20,10,5,.88)); }
+.highlands-home .campaign-card img { width:100%; height:100%; object-fit:cover; transition:transform .6s ease; }
+.highlands-home .campaign-card:hover img { transform:scale(1.06); }
+.highlands-home .campaign-content { position:absolute; z-index:2; left:0; right:0; bottom:0; padding:28px; }
+.highlands-home .campaign-content span { font-size:.7rem; letter-spacing:1.8px; font-weight:800; color:#f4cf9b; }
+.highlands-home .campaign-content h3 { font-size:1.65rem; margin:7px 0; }
+.highlands-home .campaign-large .campaign-content h3 { font-size:2.2rem; }
+.highlands-home .campaign-content p { color:rgba(255,255,255,.76); margin:0 0 10px; }
+.highlands-home .category-showcase { height:480px; }
+.highlands-home .category-showcase .card-image-wrap { height:100%; }
+.highlands-home .category-showcase .card-overlay { display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; padding:35px; background:linear-gradient(180deg,transparent 35%,rgba(36,23,16,.9)); }
+.highlands-home .category-showcase .card-overlay span { color:#f4cf9b; letter-spacing:2px; font-size:.7rem; font-weight:800; }
+.highlands-home .category-showcase .card-overlay h3 { font-size:2rem; margin:8px 0; color:white; }
+.highlands-home .category-showcase .card-overlay p { color:rgba(255,255,255,.76); max-width:420px; }
+.highlands-home .category-showcase .card-overlay b { color:white; margin-top:8px; }
+
+@media(max-width:767.98px){.highlands-home .campaign-heading{align-items:flex-start;flex-direction:column}.highlands-home .campaign-heading h2{font-size:2rem}.highlands-home .campaign-grid{grid-template-columns:1fr;grid-template-rows:none}.highlands-home .campaign-card,.highlands-home .campaign-large{grid-row:auto;height:330px}.highlands-home .category-showcase{height:360px}.highlands-home .grid-2{grid-template-columns:1fr}}
 
 /* Cards */
 .highlands-home .card-horizontal {

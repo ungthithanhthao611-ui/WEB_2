@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import com.rainbowforest.productcatalogservice.entity.ProductVariant;
+import com.rainbowforest.productcatalogservice.repository.ProductVariantRepository;
 
 @RestController
 public class ProductController {
@@ -17,6 +19,11 @@ public class ProductController {
     
     @Autowired
     private HeaderGenerator headerGenerator;
+
+    @Autowired private ProductVariantRepository variantRepository;
+
+    @GetMapping("/products/{id}/variants")
+    public List<ProductVariant> getVariants(@PathVariable Long id){return variantRepository.findByProductIdOrderByPriceAsc(id);}
 
     @GetMapping (value = "/products")
     public ResponseEntity<List<Product>> getAllProducts(){

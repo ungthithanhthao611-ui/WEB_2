@@ -21,15 +21,10 @@ public class CartController {
     @GetMapping (value = "/cart")
     public ResponseEntity<List<Object>> getCart(@RequestHeader(value = "Cart-Id") String cartId){
         List<Object> cart = cartService.getCart(cartId);
-        if(!cart.isEmpty()) {
-        	return new ResponseEntity<List<Object>>(
-        			cart,
-        			headerGenerator.getHeadersForSuccessGetMethod(),
-        			HttpStatus.OK);
-        }
-    	return new ResponseEntity<List<Object>>(
-    			headerGenerator.getHeadersForError(),
-    			HttpStatus.NOT_FOUND);  
+        return new ResponseEntity<List<Object>>(
+                cart,
+                headerGenerator.getHeadersForSuccessGetMethod(),
+                HttpStatus.OK);
     }
 
     @PostMapping(value = "/cart", params = {"productId", "quantity"})

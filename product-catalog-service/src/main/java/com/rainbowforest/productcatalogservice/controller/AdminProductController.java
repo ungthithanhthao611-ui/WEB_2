@@ -9,6 +9,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.util.List;
+import com.rainbowforest.productcatalogservice.entity.ProductVariant;
+import com.rainbowforest.productcatalogservice.repository.ProductVariantRepository;
+import org.springframework.transaction.annotation.Transactional;
+
 @RestController
 @RequestMapping("/admin")
 public class AdminProductController {
@@ -18,6 +23,17 @@ public class AdminProductController {
     
     @Autowired
     private HeaderGenerator headerGenerator;
+
+    @Autowired private ProductVariantRepository variantRepository;
+
+    @GetMapping(value = "/products")
+    public ResponseEntity<List<Product>> getAdminProducts() {
+        List<Product> products = productService.getAdminManagedProducts();
+        return new ResponseEntity<>(
+                products,
+                headerGenerator.getHeadersForSuccessGetMethod(),
+                HttpStatus.OK);
+    }
 
     @PostMapping(value = "/products")
     public ResponseEntity<Product> addProduct(@RequestBody Product product, HttpServletRequest request){
@@ -83,5 +99,19 @@ public class AdminProductController {
 			}
     	}
     	return new ResponseEntity<Void>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);      
+    }
+
+    @GetMapping("/products/{id}/variants")
+    public List<ProductVariant> variants(@PathVariable Long id){return variantRepository.findByProductIdOrderByPriceAsc(id);}
+
+    @PutMapping("/products/{id}/variants")
+    @Transactional
+    public List<ProductVariant> saveVariants(@PathVariable Long id,@RequestBody List<ProductVariant> variants){
+        Product product=productService.getProductById(id);
+        if(product==null)throw new IllegalArgumentException("Không tìm thấy sản phẩm");
+        variantRepository.deleteAll(variantRepository.findByProductIdOrderByPriceAsc(id));
+        variantRepository.flush();
+        variants.forEach(v->{v.setId(null);v.setProduct(product);if(v.getSku()==null||v.getSku().isBlank())v.setSku("P"+id+"-"+v.getName().toUpperCase());});
+        return variantRepository.saveAll(variants);
     }
 }

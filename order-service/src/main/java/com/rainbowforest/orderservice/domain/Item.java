@@ -25,6 +25,21 @@ public class Item {
     @NotNull
     private BigDecimal subTotal;
 
+    @Column(name = "product_name_snapshot")
+    private String productNameSnapshot;
+
+    @Column(name = "size_name")
+    private String size;
+
+    @Column(name = "sku")
+    private String sku;
+
+    @Column(name = "unit_price")
+    private BigDecimal unitPrice;
+
+    @Column(name = "source_product_id")
+    private Long sourceProductId;
+
     @ManyToOne (cascade = CascadeType.ALL)
     @JoinColumn (name = "product_id")
     private Product product;
@@ -66,6 +81,17 @@ public class Item {
 	public void setSubTotal(BigDecimal subTotal) {
 		this.subTotal = subTotal;
 	}
+
+    public String getProductNameSnapshot() { return productNameSnapshot; }
+    public void setProductNameSnapshot(String value) { this.productNameSnapshot = value; }
+    public String getSize() { return size; }
+    public void setSize(String size) { this.size = size; }
+    public String getSku() { return sku; }
+    public void setSku(String sku) { this.sku = sku; }
+    public BigDecimal getUnitPrice() { return unitPrice; }
+    public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
+    public Long getSourceProductId() { return sourceProductId; }
+    public void setSourceProductId(Long value) { this.sourceProductId = value; }
 
 	public Product getProduct() {
 		return product;

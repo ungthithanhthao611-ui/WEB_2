@@ -1,39 +1,42 @@
 import { useEffect, useState } from "react";
-import { getProducts, createProduct, updateProduct, deleteProduct, getCategories } from "../../services/productService";
+import {
+  getAdminProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getAdminCategories,
+  getProductVariants,
+  saveProductVariants,
+} from "../../services/productService";
 import AdminLayout from "../../layouts/AdminLayout";
+
+const EMPTY_FORM = {
+  name: "",
+  description: "",
+  price: "",
+  originalPrice: "",
+  quantity: "",
+  imageUrl: "",
+  categoryId: "",
+};
 
 function AdminProductPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    price: "",
-    originalPrice: "",
-    quantity: "",
-    imageUrl: "",
-    categoryId: "",
-  });
-
-  // State cho chỉnh sửa sản phẩm
+  const [formMode, setFormMode] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    description: "",
-    price: "",
-    originalPrice: "",
-    quantity: "",
-    imageUrl: "",
-    categoryId: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [hasSale, setHasSale] = useState(false);
+  const [sizes, setSizes] = useState([{ name: "M", sku:"", price: "", salePrice: "", stock:0 }, { name: "L", sku:"", price: "", salePrice: "", stock:0 }]);
 
   const loadProducts = async () => {
     try {
-      const res = await getProducts();
-      setProducts(res.data);
+      const res = await getAdminProducts();
+      setProducts(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error(error);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -41,84 +44,81 @@ function AdminProductPage() {
 
   const loadCategories = async () => {
     try {
-      const res = await getCategories();
-      setCategories(res.data);
+      const res = await getAdminCategories();
+      setCategories(Array.isArray(res.data) ? res.data : []);
     } catch (error) {
       console.error("Lỗi lấy danh mục:", error);
+      setCategories([]);
     }
+  };
+
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setHasSale(false);
+    setEditingProduct(null);
+    setFormMode(null);
   };
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleEditChange = (e) => {
-    setEditForm({
-      ...editForm,
-      [e.target.name]: e.target.value,
-    });
+  const handleOpenCreate = () => {
+    setForm(EMPTY_FORM);
+    setHasSale(false);
+    setEditingProduct(null);
+    setFormMode("create");
+    setSizes([{ name: "M", price: "", salePrice: "" }, { name: "L", price: "", salePrice: "" }]);
   };
 
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    try {
-      await createProduct({
-        ...form,
-        price: Number(form.price),
-        originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
-        quantity: Number(form.quantity),
-        categoryId: String(form.categoryId), // Lưu ID dưới dạng chuỗi khớp với kiểu String của Backend
-      });
-
-      alert("Thêm sản phẩm thành công!");
-      setForm({
-        name: "",
-        description: "",
-        price: "",
-        originalPrice: "",
-        quantity: "",
-        imageUrl: "",
-        categoryId: "",
-      });
-      loadProducts();
-    } catch (error) {
-      alert("Thêm sản phẩm thất bại!");
-      console.error(error);
-    }
-  };
-
-  const handleStartEdit = (p) => {
+  const handleStartEdit = async (p) => {
+    const originalPrice = p.originalPrice || "";
     setEditingProduct(p);
-    setEditForm({
+    setForm({
       name: p.name || p.productName || "",
       description: p.description || p.discription || "",
       price: p.price || "",
-      originalPrice: p.originalPrice || "",
+      originalPrice,
       quantity: p.quantity || p.availability || "",
       imageUrl: p.imageUrl || "",
       categoryId: p.categoryId || p.category || "",
     });
+    setHasSale(!!originalPrice);
+    setFormMode("edit");
+    try { const response=await getProductVariants(p.id,true); setSizes(response.data.length?response.data:[{name:"M",sku:"",price:p.originalPrice||p.price||"",salePrice:p.originalPrice?p.price:"",stock:p.quantity||0}]); } catch { setSizes([{name:"M",sku:"",price:p.price||"",salePrice:"",stock:p.quantity||0}]); }
   };
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    try {
-      await updateProduct(editingProduct.id, {
-        ...editForm,
-        price: Number(editForm.price),
-        originalPrice: editForm.originalPrice ? Number(editForm.originalPrice) : null,
-        quantity: Number(editForm.quantity),
-        categoryId: String(editForm.categoryId),
-      });
+  const buildPayload = () => ({
+    ...form,
+    price: Number(form.price),
+    originalPrice: hasSale && form.originalPrice ? Number(form.originalPrice) : null,
+    quantity: Number(form.quantity),
+    categoryId: String(form.categoryId),
+  });
 
-      alert("Cập nhật sản phẩm thành công!");
-      setEditingProduct(null);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (hasSale && Number(form.originalPrice) <= Number(form.price)) {
+      alert("Giá gốc phải lớn hơn giá sale!");
+      return;
+    }
+
+    try {
+      const payload = buildPayload();
+      if (formMode === "create") {
+        const response = await createProduct(payload);
+        await saveProductVariants(response.data.id, sizes.filter((size) => size.name && size.price).map((size) => ({...size, price:Number(size.price), salePrice:size.salePrice?Number(size.salePrice):null,stock:Number(size.stock||0),active:true})));
+        alert("Thêm sản phẩm thành công!");
+      } else {
+        await updateProduct(editingProduct.id, payload);
+        await saveProductVariants(editingProduct.id, sizes.filter((size) => size.name && size.price).map((size) => ({...size, price:Number(size.price), salePrice:size.salePrice?Number(size.salePrice):null,stock:Number(size.stock||0),active:true})));
+        alert("Cập nhật sản phẩm thành công!");
+      }
+      resetForm();
       loadProducts();
     } catch (error) {
-      alert("Cập nhật sản phẩm thất bại!");
+      alert(formMode === "create" ? "Thêm sản phẩm thất bại!" : "Cập nhật sản phẩm thất bại!");
       console.error(error);
     }
   };
@@ -141,289 +141,261 @@ function AdminProductPage() {
     loadCategories();
   }, []);
 
-  // Hàm phụ trợ để lấy tên danh mục từ ID
   const getCategoryName = (catId) => {
     const found = categories.find((cat) => String(cat.id) === String(catId));
     return found ? found.name : `Danh mục #${catId}`;
   };
 
-  return (
-    <AdminLayout>
-      <div className="container mt-4 mb-5">
-        <h2 className="fw-bold mb-4">Quản Lý Sản Phẩm</h2>
-
-        {/* Form thêm sản phẩm */}
-        <form onSubmit={handleCreate} className="card shadow-sm border-0 rounded-4 p-4 mb-4">
-          <h5 className="fw-bold text-primary mb-3">Thêm sản phẩm mới</h5>
-          <div className="row g-3">
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">Tên sản phẩm</label>
-              <input
-                name="name"
-                type="text"
-                className="form-control rounded-3"
-                value={form.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">Giá bán (VNĐ)</label>
-              <input
-                name="price"
-                type="number"
-                className="form-control rounded-3"
-                value={form.price}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">Giá gốc (VNĐ)</label>
-              <input
-                name="originalPrice"
-                type="number"
-                className="form-control rounded-3"
-                placeholder="Để trống nếu không giảm giá"
-                value={form.originalPrice}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label fw-semibold">Số lượng trong kho</label>
-              <input
-                name="quantity"
-                type="number"
-                className="form-control rounded-3"
-                value={form.quantity}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-semibold">Đường dẫn hình ảnh (URL)</label>
-              <input
-                name="imageUrl"
-                type="url"
-                className="form-control rounded-3"
-                placeholder="https://example.com/image.png"
-                value={form.imageUrl}
-                onChange={handleChange}
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label fw-semibold">Danh mục đồ chơi</label>
-              <select
-                name="categoryId"
-                className="form-select rounded-3"
-                value={form.categoryId}
-                onChange={handleChange}
-                required
-              >
-                <option value="">-- Chọn danh mục --</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-12">
-              <label className="form-label fw-semibold">Mô tả sản phẩm</label>
-              <textarea
-                name="description"
-                className="form-control rounded-3"
-                rows="3"
-                value={form.description}
-                onChange={handleChange}
-              ></textarea>
-            </div>
-          </div>
-          <button type="submit" className="btn btn-primary px-4 py-2.5 rounded-3 fw-bold mt-4 align-self-start">
-            <i className="fa-solid fa-plus me-1"></i> Lưu Sản Phẩm
-          </button>
-        </form>
-
-        {/* Bảng danh sách sản phẩm */}
-        <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
-          {loading ? (
-            <div className="text-center my-4">
-              <div className="spinner-border text-primary" role="status">
-                <span className="visually-hidden">Đang tải...</span>
-              </div>
-            </div>
-          ) : products.length === 0 ? (
-            <div className="text-center my-4 py-4 text-muted">Chưa có sản phẩm nào được tạo.</div>
-          ) : (
-            <table className="table table-hover align-middle mb-0">
-              <thead className="table-light">
-                <tr>
-                  <th className="px-4 py-3" style={{ width: "80px" }}>ID</th>
-                  <th className="py-3" style={{ width: "90px" }}>Hình ảnh</th>
-                  <th className="py-3">Tên sản phẩm</th>
-                  <th className="py-3">Danh mục</th>
-                  <th className="py-3">Giá bán</th>
-                  <th className="py-3">Giá gốc</th>
-                  <th className="py-3">Số lượng kho</th>
-                  <th className="py-3 text-center" style={{ width: "200px" }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((p) => (
-                  <tr key={p.id}>
-                    <td className="px-4 py-3 fw-bold">#{p.id}</td>
-                    <td className="py-3">
-                      <img
-                        src={p.imageUrl || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop"}
-                        alt={p.name || p.productName}
-                        width="50"
-                        height="50"
-                        className="rounded-3"
-                        style={{ objectFit: "cover" }}
-                      />
-                    </td>
-                    <td className="py-3 fw-semibold">{p.name || p.productName}</td>
-                    <td className="py-3">
-                      <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3">
-                        {getCategoryName(p.categoryId || p.category)}
-                      </span>
-                    </td>
-                    <td className="py-3 text-danger fw-bold">{(p.price || 0).toLocaleString("vi-VN")} VNĐ</td>
-                    <td className="py-3 text-muted text-decoration-line-through">
-                      {p.originalPrice ? `${p.originalPrice.toLocaleString("vi-VN")} VNĐ` : "-"}
-                    </td>
-                    <td className="py-3 fw-medium">{p.quantity || p.availability} chiếc</td>
-                    <td className="py-3 text-center">
-                      <button
-                        className="btn btn-outline-primary btn-sm rounded-3 px-2.5 me-2"
-                        onClick={() => handleStartEdit(p)}
-                      >
-                        <i className="fa-solid fa-pen-to-square me-1"></i> Sửa
-                      </button>
-                      <button
-                        className="btn btn-danger btn-sm rounded-3 px-2.5"
-                        onClick={() => handleDelete(p.id)}
-                      >
-                        <i className="fa-solid fa-trash-can me-1"></i> Xóa
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+  const renderFormFields = () => (
+    <div className="row g-3">
+      <div className="col-md-6">
+        <label className="form-label fw-semibold">Tên sản phẩm</label>
+        <input
+          name="name"
+          type="text"
+          className="form-control rounded-3"
+          placeholder="Ví dụ: Bánh Tiramisu"
+          value={form.name}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="col-md-6">
+        <label className="form-label fw-semibold">Danh mục</label>
+        <select
+          name="categoryId"
+          className="form-select rounded-3"
+          value={form.categoryId}
+          onChange={handleChange}
+          required
+        >
+          <option value="">-- Chọn danh mục --</option>
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Modal Sửa Sản Phẩm */}
-      {editingProduct && (
+      <div className="col-12">
+        <div className="form-check">
+          <input
+            className="form-check-input"
+            type="checkbox"
+            id="hasSale"
+            checked={hasSale}
+            onChange={(e) => {
+              setHasSale(e.target.checked);
+              if (!e.target.checked) setForm({ ...form, originalPrice: "" });
+            }}
+          />
+          <label className="form-check-label fw-semibold" htmlFor="hasSale">
+            Sản phẩm đang giảm giá (có giá sale)
+          </label>
+        </div>
+      </div>
+      <div className="col-12">
+        <label className="form-label fw-semibold">Size, giá gốc và giá sale</label>
+        <div className="row g-2 mb-1 px-1 text-muted small fw-semibold">
+          <div className="col-2">Size</div><div className="col-2">SKU</div><div className="col-2">Giá gốc</div><div className="col-2">Giá sale</div><div className="col-2">Tồn kho</div><div className="col-2"></div>
+        </div>
+        {sizes.map((size, index) => <div className="row g-2 mb-2 align-items-center" key={index}><div className="col-2"><input className="form-control" placeholder="Size" value={size.name} onChange={(e) => setSizes(sizes.map((item,i)=>i===index?{...item,name:e.target.value}:item))}/></div><div className="col-2"><input className="form-control" placeholder="SKU" value={size.sku||""} onChange={(e) => setSizes(sizes.map((item,i)=>i===index?{...item,sku:e.target.value}:item))}/></div><div className="col-2"><input className="form-control" type="number" placeholder="Giá gốc" value={size.price} onChange={(e) => setSizes(sizes.map((item,i)=>i===index?{...item,price:e.target.value}:item))}/></div><div className="col-2"><input className="form-control" type="number" placeholder="Giá sale" value={size.salePrice||""} onChange={(e) => setSizes(sizes.map((item,i)=>i===index?{...item,salePrice:e.target.value}:item))}/></div><div className="col-2"><input className="form-control" type="number" min="0" placeholder="Tồn kho" value={size.stock||0} onChange={(e) => setSizes(sizes.map((item,i)=>i===index?{...item,stock:e.target.value}:item))}/></div><div className="col-2"><button type="button" className="btn btn-outline-danger w-100" onClick={()=>setSizes(sizes.filter((_,i)=>i!==index))}>Xóa</button></div></div>)}
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={()=>setSizes([...sizes,{name:"",sku:"",price:"",salePrice:"",stock:0}])}>+ Thêm size</button>
+      </div>
+
+      {hasSale ? (
+        <>
+          <div className="col-md-6">
+            <label className="form-label fw-semibold">Giá gốc (VNĐ)</label>
+            <input
+              name="originalPrice"
+              type="number"
+              className="form-control rounded-3"
+              placeholder="Giá trước khi giảm"
+              value={form.originalPrice}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div className="col-md-6">
+            <label className="form-label fw-semibold">Giá sale (VNĐ)</label>
+            <input
+              name="price"
+              type="number"
+              className="form-control rounded-3"
+              placeholder="Giá bán sau giảm"
+              value={form.price}
+              onChange={handleChange}
+              required
+            />
+          </div>
+        </>
+      ) : (
+        <div className="col-md-6">
+          <label className="form-label fw-semibold">Giá bán (VNĐ)</label>
+          <input
+            name="price"
+            type="number"
+            className="form-control rounded-3"
+            placeholder="Giá bán sản phẩm"
+            value={form.price}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      )}
+
+      <div className="col-md-6">
+        <label className="form-label fw-semibold">Số lượng trong kho</label>
+        <input
+          name="quantity"
+          type="number"
+          className="form-control rounded-3"
+          value={form.quantity}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="col-md-6">
+        <label className="form-label fw-semibold">Đường dẫn hình ảnh (URL)</label>
+        <input
+          name="imageUrl"
+          type="url"
+          className="form-control rounded-3"
+          placeholder="https://example.com/image.png"
+          value={form.imageUrl}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="col-12">
+        <label className="form-label fw-semibold">Mô tả sản phẩm</label>
+        <textarea
+          name="description"
+          className="form-control rounded-3"
+          rows="3"
+          placeholder="Mô tả ngắn về sản phẩm..."
+          value={form.description}
+          onChange={handleChange}
+        ></textarea>
+      </div>
+    </div>
+  );
+
+  return (
+    <AdminLayout>
+      <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+          <h2 className="fw-bold mb-1">Quản Lý Sản Phẩm</h2>
+          <p className="text-muted mb-0">Chỉ hiển thị sản phẩm do admin thêm vào hệ thống</p>
+        </div>
+        <button
+          className="btn btn-danger rounded-pill px-4 py-2 fw-bold"
+          onClick={handleOpenCreate}
+        >
+          <i className="fa-solid fa-plus me-2"></i>Thêm sản phẩm
+        </button>
+      </div>
+
+      <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
+        {loading ? (
+          <div className="text-center my-5">
+            <div className="spinner-border text-danger" role="status">
+              <span className="visually-hidden">Đang tải...</span>
+            </div>
+          </div>
+        ) : products.length === 0 ? (
+          <div className="text-center my-5 py-4 text-muted">
+            <i className="fa-solid fa-mug-hot fs-1 mb-3 d-block opacity-50"></i>
+            Chưa có sản phẩm nào. Bấm <strong>Thêm sản phẩm</strong> để bắt đầu.
+          </div>
+        ) : (
+          <table className="table table-hover align-middle mb-0">
+            <thead className="table-light">
+              <tr>
+                <th className="px-4 py-3" style={{ width: "80px" }}>ID</th>
+                <th className="py-3" style={{ width: "90px" }}>Hình ảnh</th>
+                <th className="py-3">Tên sản phẩm</th>
+                <th className="py-3">Danh mục</th>
+                <th className="py-3">Giá bán / Sale</th>
+                <th className="py-3">Giá gốc</th>
+                <th className="py-3">Tồn kho</th>
+                <th className="py-3 text-center" style={{ width: "200px" }}>Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map((p) => (
+                <tr key={p.id}>
+                  <td className="px-4 py-3 fw-bold">#{p.id}</td>
+                  <td className="py-3">
+                    <img
+                      src={
+                        p.imageUrl ||
+                        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=500&auto=format&fit=crop"
+                      }
+                      alt={p.name || p.productName}
+                      width="50"
+                      height="50"
+                      className="rounded-3"
+                      style={{ objectFit: "cover" }}
+                    />
+                  </td>
+                  <td className="py-3 fw-semibold">{p.name || p.productName}</td>
+                  <td className="py-3">
+                    <span className="badge bg-light text-dark border px-2.5 py-1.5 rounded-3">
+                      {getCategoryName(p.categoryId || p.category)}
+                    </span>
+                  </td>
+                  <td className="py-3 text-danger fw-bold">
+                    {(p.price || 0).toLocaleString("vi-VN")} VNĐ
+                  </td>
+                  <td className="py-3 text-muted text-decoration-line-through">
+                    {p.originalPrice ? `${p.originalPrice.toLocaleString("vi-VN")} VNĐ` : "-"}
+                  </td>
+                  <td className="py-3 fw-medium">{p.quantity || p.availability}</td>
+                  <td className="py-3 text-center">
+                    <button
+                      className="btn btn-outline-danger btn-sm rounded-3 px-2.5 me-2"
+                      onClick={() => handleStartEdit(p)}
+                    >
+                      <i className="fa-solid fa-pen-to-square me-1"></i> Sửa
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm rounded-3 px-2.5"
+                      onClick={() => handleDelete(p.id)}
+                    >
+                      <i className="fa-solid fa-trash-can me-1"></i> Xóa
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {formMode && (
         <div className="modal show d-block" tabIndex="-1" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
           <div className="modal-dialog modal-lg modal-dialog-centered">
             <div className="modal-content border-0 rounded-4 shadow-lg">
-              <form onSubmit={handleUpdate}>
+              <form onSubmit={handleSubmit}>
                 <div className="modal-header border-bottom-0 pt-4 px-4 pb-2">
-                  <h5 className="modal-title fw-bold text-dark">Chỉnh Sửa Sản Phẩm</h5>
-                  <button
-                    type="button"
-                    className="btn-close"
-                    onClick={() => setEditingProduct(null)}
-                  ></button>
+                  <h5 className="modal-title fw-bold text-dark">
+                    {formMode === "create" ? "Thêm Sản Phẩm Mới" : "Chỉnh Sửa Sản Phẩm"}
+                  </h5>
+                  <button type="button" className="btn-close" onClick={resetForm}></button>
                 </div>
-                <div className="modal-body px-4 py-3">
-                  <div className="row g-3">
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Tên sản phẩm</label>
-                      <input
-                        name="name"
-                        type="text"
-                        className="form-control rounded-3"
-                        value={editForm.name}
-                        onChange={handleEditChange}
-                        required
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label className="form-label fw-semibold">Danh mục đồ chơi</label>
-                      <select
-                        name="categoryId"
-                        className="form-select rounded-3"
-                        value={editForm.categoryId}
-                        onChange={handleEditChange}
-                        required
-                      >
-                        <option value="">-- Chọn danh mục --</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Giá bán (VNĐ)</label>
-                      <input
-                        name="price"
-                        type="number"
-                        className="form-control rounded-3"
-                        value={editForm.price}
-                        onChange={handleEditChange}
-                        required
-                      />
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Giá gốc (VNĐ)</label>
-                      <input
-                        name="originalPrice"
-                        type="number"
-                        className="form-control rounded-3"
-                        placeholder="Không giảm giá"
-                        value={editForm.originalPrice || ""}
-                        onChange={handleEditChange}
-                      />
-                    </div>
-                    <div className="col-md-4">
-                      <label className="form-label fw-semibold">Số lượng trong kho</label>
-                      <input
-                        name="quantity"
-                        type="number"
-                        className="form-control rounded-3"
-                        value={editForm.quantity}
-                        onChange={handleEditChange}
-                        required
-                      />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Đường dẫn hình ảnh (URL)</label>
-                      <input
-                        name="imageUrl"
-                        type="url"
-                        className="form-control rounded-3"
-                        value={editForm.imageUrl}
-                        onChange={handleEditChange}
-                      />
-                    </div>
-                    <div className="col-12">
-                      <label className="form-label fw-semibold">Mô tả sản phẩm</label>
-                      <textarea
-                        name="description"
-                        className="form-control rounded-3"
-                        rows="3"
-                        value={editForm.description}
-                        onChange={handleEditChange}
-                      ></textarea>
-                    </div>
-                  </div>
-                </div>
+                <div className="modal-body px-4 py-3">{renderFormFields()}</div>
                 <div className="modal-footer border-top-0 pb-4 px-4 pt-2 justify-content-end gap-2">
                   <button
                     type="button"
                     className="btn btn-light rounded-3 px-4 py-2 fw-semibold"
-                    onClick={() => setEditingProduct(null)}
+                    onClick={resetForm}
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn btn-primary rounded-3 px-4 py-2 fw-bold">
-                    Cập Nhật
+                  <button type="submit" className="btn btn-danger rounded-3 px-4 py-2 fw-bold">
+                    {formMode === "create" ? "Lưu Sản Phẩm" : "Cập Nhật"}
                   </button>
                 </div>
               </form>

@@ -13,11 +13,10 @@ axiosClient.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  let cartId = sessionStorage.getItem("cartId");
-  if (!cartId) {
-    cartId = String(Math.floor(Math.random() * 1000000) + 1);
-    sessionStorage.setItem("cartId", cartId);
-  }
+  const userId = sessionStorage.getItem("userId");
+  let cartId = userId ? `user-${userId}` : sessionStorage.getItem("cartId");
+  if (!cartId) cartId = `guest-${Math.floor(Math.random() * 1000000) + 1}`;
+  sessionStorage.setItem("cartId", cartId);
   config.headers["Cart-Id"] = cartId;
 
   return config;

@@ -12,4 +12,5 @@ public interface ProductService {
     public Product addProduct(Product product);
     public Product updateProduct(Long id, Product product);
     public void deleteProduct(Long productId);
+    public List<Product> getAdminManagedProducts();
 }

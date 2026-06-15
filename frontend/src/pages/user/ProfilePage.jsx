@@ -32,7 +32,7 @@ function ProfilePage() {
         <div className="card shadow-sm border-0 rounded-5 p-4 bg-white">
           <div className="text-center mb-4">
             <h3 className="fw-extrabold text-danger mb-1">THÔNG TIN TÀI KHOẢN</h3>
-            <p className="text-muted">Thông tin tài khoản phụ huynh trên hệ thống MyKingdom</p>
+            <p className="text-muted">Thông tin thành viên Highlands Coffee</p>
           </div>
 
           {loading ? (
@@ -63,7 +63,7 @@ function ProfilePage() {
               </div>
 
               <div className="mb-3 border-bottom pb-2">
-                <span className="text-muted d-block" style={{ fontSize: "0.85rem" }}>Email phụ huynh</span>
+                <span className="text-muted d-block" style={{ fontSize: "0.85rem" }}>Email khách hàng</span>
                 <span className="fw-bold text-dark fs-6">{profile.userDetails ? profile.userDetails.email : "N/A"}</span>
               </div>
 
@@ -75,7 +75,8 @@ function ProfilePage() {
               </div>
 
               <div className="text-center">
-                <p className="text-muted" style={{ fontSize: "0.85rem" }}>Cảm ơn phụ huynh đã đồng hành cùng MyKingdom trong việc phát triển tư duy của trẻ!</p>
+                <p className="text-muted" style={{ fontSize: "0.85rem" }}>Cảm ơn bạn đã đồng hành cùng Highlands Coffee. Mỗi ly cà phê là một trải nghiệm đậm đà vị Việt.</p>
+                <a href="/orders" className="btn btn-outline-danger rounded-pill px-4">Theo dõi đơn hàng</a>
               </div>
             </div>
           )}

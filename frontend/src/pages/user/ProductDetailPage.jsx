@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getProductById } from "../../services/productService";
+import { getProductById, getProductVariants } from "../../services/productService";
 import { addToCart } from "../../services/cartService";
 import UserLayout from "../../layouts/UserLayout";
+import { notifyCartChanged, setCartItemMeta, showToast } from "../../services/shopConfigService";
+import "./ProductDetailPage.css";
 
 function ProductDetailPage() {
   const { id } = useParams();
@@ -10,11 +12,16 @@ function ProductDetailPage() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [sizes, setSizes] = useState([]);
+  const [selectedSize, setSelectedSize] = useState(null);
 
   const loadProduct = async () => {
     try {
       const res = await getProductById(id);
       setProduct(res.data);
+      const variants = (await getProductVariants(res.data.id)).data.filter(item => item.active);
+      setSizes(variants);
+      setSelectedSize(variants.find(item => Number(item.stock) > 0) || variants[0] || null);
     } catch (error) {
       console.error(error);
     } finally {
@@ -25,17 +32,22 @@ function ProductDetailPage() {
   const handleAddToCart = async () => {
     const userId = sessionStorage.getItem("userId");
     if (!userId) {
-      alert("Vui lòng đăng nhập trước!");
+      showToast("Vui lòng đăng nhập trước!", "error");
       navigate("/login");
       return;
     }
 
     try {
-      await addToCart(product.id, quantity);
-      alert("Đã thêm sản phẩm đồ chơi vào giỏ hàng thành công!");
+      const stock = Number(selectedSize?.stock ?? product.quantity ?? product.availability ?? 0);
+      if (stock <= 0) return showToast("Sản phẩm đã hết hàng", "error");
+      if (quantity > stock) return showToast(`Chỉ còn ${stock} sản phẩm`, "error");
+      await addToCart(product.id, quantity, stock);
+      setCartItemMeta(product.id, { size: selectedSize?.name || "Tiêu chuẩn", sku: selectedSize?.sku || "", price: currentPrice, stock });
+      notifyCartChanged();
+      showToast(`Đã thêm ${product.name} - size ${selectedSize?.name || "tiêu chuẩn"} vào giỏ`);
     } catch (error) {
       console.error(error);
-      alert("Thêm vào giỏ hàng thất bại!");
+      showToast("Thêm vào giỏ hàng thất bại!", "error");
     }
   };
 
@@ -45,10 +57,16 @@ function ProductDetailPage() {
 
   const hasDiscount = product && product.originalPrice && product.originalPrice > product.price;
   const discountPercentage = hasDiscount ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
+  const selectedRegularPrice = Number(selectedSize?.price || product?.originalPrice || product?.price || 0);
+  const inheritedSale = hasDiscount && selectedRegularPrice === Number(product.originalPrice) ? Number(product.price) : null;
+  const selectedSalePrice = selectedSize?.salePrice && Number(selectedSize.salePrice) < selectedRegularPrice ? Number(selectedSize.salePrice) : inheritedSale;
+  const currentPrice = selectedSalePrice || selectedRegularPrice;
+  const maxStock = Number(selectedSize?.stock ?? product?.quantity ?? product?.availability ?? 0);
 
   return (
     <UserLayout>
       <div className="container mt-4">
+        <button className="product-back-button" onClick={() => navigate("/products")}><i className="fa-solid fa-arrow-left"></i> Quay lại thực đơn</button>
         {loading ? (
           <div className="text-center my-5">
             <div className="spinner-border text-danger" role="status">
@@ -58,57 +76,57 @@ function ProductDetailPage() {
         ) : !product ? (
           <div className="alert alert-danger text-center">Sản phẩm đồ chơi không tồn tại!</div>
         ) : (
-          <div className="card shadow-sm border-0 rounded-5 overflow-hidden p-4 bg-white">
-            <div className="row g-4">
-              <div className="col-md-6">
-                <div className="bg-light rounded-4 overflow-hidden position-relative p-2" style={{ height: "400px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div className="product-detail-shell">
+            <div className="row g-0">
+              <div className="col-lg-6">
+                <div className="product-gallery">
                   {hasDiscount && (
-                    <span className="toy-badge-discount" style={{ top: "25px", left: "25px" }}>-{discountPercentage}% OFF</span>
+                    <span className="product-discount">-{discountPercentage}%</span>
                   )}
                   <img
                     src={product.imageUrl || "https://images.unsplash.com/photo-1585366119957-e5733f399e7c?w=500"}
                     alt={product.name}
-                    className="w-100 h-100"
-                    style={{ objectFit: "cover", borderRadius: "20px" }}
+                    className="product-main-image"
                   />
+                  <div className="gallery-note"><i className="fa-solid fa-leaf"></i> Pha chế tươi mới mỗi ngày</div>
                 </div>
               </div>
-              <div className="col-md-6 d-flex flex-column justify-content-between py-2">
-                <div>
-                  <span className="badge bg-danger mb-2 px-3 py-2 rounded-pill fw-bold" style={{ fontSize: "0.85rem" }}>LEGO & ĐỒ CHƠI CAO CẤP</span>
-                  <h1 className="fw-extrabold text-dark mb-2" style={{ fontSize: "2rem" }}>{product.name}</h1>
-                  <p className="text-muted mb-4 fs-6" style={{ lineHeight: "1.6" }}>{product.description}</p>
+              <div className="col-lg-6">
+                <div className="product-detail-content">
+                  <span className="product-eyebrow">HIGHLANDS SIGNATURE</span>
+                  <h1>{product.name}</h1>
+                  <div className="product-rating"><span>★★★★★</span><small>Hương vị được yêu thích</small></div>
+                  <p className="product-description">{product.description}</p>
                   
-                  <div className="card bg-light border-0 rounded-4 p-3 mb-4">
-                    <span className="text-muted" style={{ fontSize: "0.9rem" }}>{hasDiscount ? "Giá khuyến mãi:" : "Giá bán:"}</span>
-                    <h3 className="text-danger fw-extrabold mb-1">{product.price.toLocaleString("vi-VN")} VNĐ</h3>
-                    {hasDiscount && (
-                      <span className="text-muted text-decoration-line-through" style={{ fontSize: "0.85rem" }}>
-                        {product.originalPrice.toLocaleString("vi-VN")} VNĐ
-                      </span>
+                  <div className="product-price-box">
+                    <span>{selectedSalePrice ? "Giá ưu đãi" : "Giá sản phẩm"}</span>
+                    <strong>{currentPrice.toLocaleString("vi-VN")}đ</strong>
+                    {selectedSalePrice && (
+                      <del>{selectedRegularPrice.toLocaleString("vi-VN")}đ</del>
                     )}
                   </div>
 
-                  <div className="d-flex align-items-center gap-3 mb-4">
-                    <span className="fw-bold text-dark">Số lượng mua:</span>
-                    <div className="d-flex align-items-center border rounded-pill bg-white px-2 py-1" style={{ width: "130px" }}>
-                      <button className="btn btn-link text-danger fw-bold border-0 p-0 fs-5 mx-2" onClick={() => setQuantity(q => Math.max(1, q - 1))}>-</button>
+                  {sizes.length > 0 && <div className="product-option"><div className="option-heading"><b>Chọn kích cỡ</b><small>Giá thay đổi theo size</small></div><div className="size-options">{sizes.map((size)=>{const regular=Number(size.price);const inherited=hasDiscount&&regular===Number(product.originalPrice)?Number(product.price):null;const sale=size.salePrice&&Number(size.salePrice)<regular?Number(size.salePrice):inherited;const outOfStock=Number(size.stock)<=0;return <button key={size.name} disabled={outOfStock} className={`${selectedSize?.name===size.name?"active":""} ${outOfStock?"out-of-stock":""}`} onClick={()=>{setSelectedSize(size);setQuantity(1)}}><b>{size.name}</b><span>{Number(sale||regular).toLocaleString("vi-VN")}đ</span>{sale&&<del>{regular.toLocaleString("vi-VN")}đ</del>}{outOfStock&&<small>Hết hàng</small>}</button>})}</div></div>}
+
+                  <div className="quantity-row">
+                    <div><b>Số lượng</b><small>Tối đa theo tồn kho</small></div>
+                    <div className="quantity-control">
+                      <button onClick={() => setQuantity(q => Math.max(1, q - 1))}>−</button>
                       <input
                         type="number"
-                        className="form-control text-center border-0 p-0 fw-bold fs-5 text-dark"
+                        className="quantity-input"
                         value={quantity}
                         min="1"
-                        onChange={(e) => setQuantity(Number(e.target.value))}
-                        style={{ boxShadow: "none" }}
+                        max={maxStock}
+                        onChange={(e) => setQuantity(Math.max(1, Math.min(maxStock, Number(e.target.value) || 1)))}
                       />
-                      <button className="btn btn-link text-danger fw-bold border-0 p-0 fs-5 mx-2" onClick={() => setQuantity(q => q + 1)}>+</button>
+                      <button disabled={quantity >= maxStock} onClick={() => setQuantity(q => Math.min(maxStock, q + 1))}>+</button>
                     </div>
                   </div>
-                </div>
-                <div>
-                  <button className="btn btn-toy-primary btn-lg w-100 py-3 rounded-pill fw-bold" onClick={handleAddToCart}>
-                    <i className="fa-solid fa-cart-plus me-2"></i> THÊM VÀO GIỎ HÀNG
+                  <button className="premium-cart-button" disabled={maxStock <= 0} onClick={handleAddToCart}>
+                    <i className="fa-solid fa-bag-shopping"></i><span>Thêm vào giỏ hàng<small>Tổng {Number(currentPrice * quantity).toLocaleString("vi-VN")}đ</small></span><i className="fa-solid fa-arrow-right"></i>
                   </button>
+                  <div className="product-benefits"><span><i className="fa-solid fa-bolt"></i> Giao nhanh 30 phút</span><span><i className="fa-solid fa-store"></i> Pha tại cửa hàng gần bạn</span><span><i className="fa-solid fa-shield-heart"></i> Nguyên liệu tuyển chọn</span></div>
                 </div>
               </div>
             </div>
@@ -120,3 +138,4 @@ function ProductDetailPage() {
 }
 
 export default ProductDetailPage;
+

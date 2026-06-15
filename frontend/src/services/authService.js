@@ -28,6 +28,8 @@ export const logout = () => {
   sessionStorage.removeItem("role");
   sessionStorage.removeItem("userId");
   sessionStorage.removeItem("email");
+  sessionStorage.removeItem("cartId");
+  window.dispatchEvent(new Event("cart-updated"));
 };
 
 export const getUserProfile = async (userId) => {

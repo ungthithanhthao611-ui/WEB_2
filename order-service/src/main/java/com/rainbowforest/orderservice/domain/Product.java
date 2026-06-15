@@ -1,6 +1,7 @@
 package com.rainbowforest.orderservice.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
@@ -12,11 +13,7 @@ public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonIgnore
     private Long productId;
-
-    @Transient
-    private Long id;
 
     @Column (name = "product_name")
     @NotNull
@@ -29,12 +26,14 @@ public class Product {
     @JsonIgnore
     private List<Item> items;
 
+    @JsonProperty("id")
     public Long getId() {
-        return id;
+        return productId;
     }
 
+    @JsonProperty("id")
     public void setId(Long id) {
-        this.id = id;
+        this.productId = id;
     }
 
     public String getProductName() {

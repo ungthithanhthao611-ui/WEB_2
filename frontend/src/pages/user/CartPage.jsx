@@ -1,17 +1,40 @@
 import { useEffect, useState } from "react";
-import { getCart, removeCartItem } from "../../services/cartService";
+import { getCart, removeCartItem, updateCartQuantity } from "../../services/cartService";
 import { useNavigate } from "react-router-dom";
 import UserLayout from "../../layouts/UserLayout";
+import { getCartMeta, notifyCartChanged, removeCartItemMeta, setCartItemMeta, showToast } from "../../services/shopConfigService";
+import { getProductById, getProductVariants } from "../../services/productService";
 
 function CartPage() {
   const navigate = useNavigate();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [meta, setMeta] = useState(getCartMeta());
 
   const loadCart = async () => {
     try {
       const res = await getCart();
-      setCart(res.data);
+      const currentMeta = getCartMeta();
+      await Promise.all((res.data || []).map(async (item) => {
+        const productId = item.product?.id;
+        if (!productId || Number.isFinite(Number(currentMeta[productId]?.stock))) return;
+        const productResponse = await getProductById(productId);
+        const variantsResponse = await getProductVariants(productId).catch(() => ({ data: [] }));
+        const selected = (variantsResponse.data || []).find(v => v.sku === currentMeta[productId]?.sku || v.name === currentMeta[productId]?.size);
+        const stock = Number(selected?.stock ?? productResponse.data.quantity ?? productResponse.data.availability ?? 0);
+        currentMeta[productId] = { ...currentMeta[productId], stock, sku: selected?.sku || currentMeta[productId]?.sku || "" };
+        setCartItemMeta(productId, currentMeta[productId]);
+      }));
+      const corrected = await Promise.all((res.data || []).map(async (item) => {
+        const max = Number(currentMeta[item.product?.id]?.stock ?? item.product?.quantity ?? item.product?.availability ?? Infinity);
+        if (Number.isFinite(max) && item.quantity > max) {
+          await updateCartQuantity(item.product.id, Math.max(1, max), max);
+          return { ...item, quantity: Math.max(1, max) };
+        }
+        return item;
+      }));
+      setMeta(currentMeta);
+      setCart(corrected);
     } catch (error) {
       console.error("Lỗi tải giỏ hàng:", error);
     } finally {
@@ -23,16 +46,26 @@ function CartPage() {
     if (!productId) return;
     try {
       await removeCartItem(productId);
+      removeCartItemMeta(productId);
+      notifyCartChanged();
       loadCart();
     } catch (error) {
       console.error(error);
-      alert("Xóa sản phẩm thất bại!");
+      showToast("Xóa sản phẩm thất bại!", "error");
     }
+  };
+
+  const handleQuantity = async (productId, quantity) => {
+    const maxStock = Number(meta[productId]?.stock ?? Infinity);
+    const requested = Math.max(1, Number(quantity) || 1);
+    const value = Math.min(requested, maxStock);
+    try { await updateCartQuantity(productId, value, maxStock); await loadCart(); notifyCartChanged(); showToast(requested > maxStock ? `Chỉ còn ${maxStock} sản phẩm trong kho` : "Đã cập nhật số lượng", requested > maxStock ? "error" : "success"); }
+    catch { showToast("Không thể cập nhật số lượng", "error"); }
   };
 
   const calculateTotal = () => {
     if (!cart || !Array.isArray(cart)) return 0;
-    return cart.reduce((total, item) => total + ((item.product ? item.product.price : 0) * item.quantity), 0);
+    return cart.reduce((total, item) => total + ((meta[item.product?.id]?.price || item.product?.price || 0) * item.quantity), 0);
   };
 
   useEffect(() => {
@@ -56,7 +89,7 @@ function CartPage() {
               <i className="fa-solid fa-face-sad-tear text-warning" style={{ fontSize: "5rem" }}></i>
             </div>
             <h4 className="fw-bold">Giỏ hàng của bạn đang trống!</h4>
-            <p className="text-muted">Hãy chọn cho bé những món đồ chơi lắp ráp LEGO, búp bê, hoặc mô hình xe cực kỳ thông minh.</p>
+            <p className="text-muted">Hãy chọn thức uống Highlands yêu thích của bạn.</p>
             <button className="btn btn-toy-primary px-5 py-3 mt-3 rounded-pill text-white fw-bold" onClick={() => navigate("/products")}>
               QUAY LẠI MUA SẮM NGAY
             </button>
@@ -68,7 +101,7 @@ function CartPage() {
                 <table className="table mb-0 align-middle">
                   <thead className="table-light">
                     <tr>
-                      <th className="px-4 py-3">Sản phẩm đồ chơi</th>
+                      <th className="px-4 py-3">Sản phẩm</th>
                       <th className="py-3">Số lượng</th>
                       <th className="py-3">Giá tiền</th>
                       <th className="py-3 text-center">Thao tác</th>
@@ -78,15 +111,15 @@ function CartPage() {
                     {cart.map((item) => (
                       <tr key={item.id || (item.product ? item.product.id : Math.random())}>
                         <td className="px-4 py-4">
-                          <span className="fw-bold text-dark fs-6">{item.product ? item.product.productName : "Sản phẩm đồ chơi"}</span>
+                          <span className="fw-bold text-dark fs-6">{item.product ? item.product.productName : "Sản phẩm"}</span>
+                          <small className="d-block text-muted">Size: {meta[item.product?.id]?.size || "Tiêu chuẩn"}</small>
                         </td>
                         <td className="py-4">
-                          <span className="badge bg-light text-dark border px-3 py-2.5 rounded-pill fw-bold" style={{ fontSize: "0.95rem" }}>
-                            {item.quantity} chiếc
-                          </span>
+                          <input type="number" min="1" max={meta[item.product?.id]?.stock} className="form-control text-center" style={{width:85}} value={item.quantity} onChange={(e)=>setCart(cart.map(row=>row.product?.id===item.product?.id?{...row,quantity:e.target.value}:row))} onBlur={(e)=>handleQuantity(item.product?.id,e.target.value)} />
+                          {Number.isFinite(Number(meta[item.product?.id]?.stock)) && <small className="d-block text-muted mt-1">Còn {meta[item.product?.id].stock}</small>}
                         </td>
                         <td className="py-4 fw-extrabold text-danger fs-6">
-                          {(item.product ? item.product.price : 0).toLocaleString("vi-VN")} VNĐ
+                          {Number((meta[item.product?.id]?.price || item.product?.price || 0) * item.quantity).toLocaleString("vi-VN")} VNĐ
                         </td>
                         <td className="py-4 text-center">
                           <button

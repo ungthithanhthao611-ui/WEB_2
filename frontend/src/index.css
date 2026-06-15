@@ -1,9 +1,9 @@
 :root {
-  --primary-color: #e30613; /* Màu đỏ MyKingdom */
+  --primary-color: #e30613; /* Màu đỏ thương hiệu cafe */
   --primary-hover: #c4040e;
-  --secondary-color: #ffc600; /* Màu vàng MyKingdom */
-  --secondary-hover: #e0ae00;
-  --light-bg: #f8f9fa;
+  --secondary-color: #d4a574; /* Màu caramel */
+  --secondary-hover: #c09060;
+  --light-bg: #fdf6ec;
   --dark-text: #212529;
   --light-text: #fff;
   --gray-text: #6c757d;
@@ -130,4 +130,78 @@ body {
 .form-toy-control:focus {
   border-color: var(--primary-color) !important;
   box-shadow: 0 0 0 3px rgba(227, 6, 19, 0.15) !important;
+}
+
+/* Responsive foundation */
+img { max-width: 100%; }
+.table-responsive, table { max-width: 100%; }
+
+.full-width-page-banner {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  background: #f6f2ed;
+}
+
+.full-width-page-banner img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 720px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.size-options button.out-of-stock {
+  opacity: .5;
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.size-options button.out-of-stock small {
+  display: block;
+  color: #b22830;
+  font-size: .68rem;
+  margin-top: 3px;
+  font-weight: 700;
+}
+
+@media (max-width: 991.98px) {
+  .user-layout-content { padding-top: 82px !important; }
+  .highlands-home .header-container { padding: 10px 16px; }
+  .highlands-home .nav-left { order: 3; width: 100%; overflow-x: auto; }
+  .highlands-home .header-container { flex-wrap: wrap; gap: 8px; }
+  .highlands-home .nav-menu { gap: 18px; min-width: max-content; }
+  .highlands-home .nav-menu a { font-size: .82rem; }
+  .highlands-home .nav-tools { gap: 12px; }
+  .highlands-home .logo img { height: 42px; }
+  .admin-layout { overflow-x: auto; }
+  .sticky-lg-top { position: static !important; }
+}
+
+@media (max-width: 767.98px) {
+  .full-width-page-banner img { min-height: 220px; }
+  .container { padding-left: 14px !important; padding-right: 14px !important; }
+  h1 { font-size: 1.75rem !important; }
+  h2 { font-size: 1.5rem !important; }
+  h3 { font-size: 1.25rem !important; }
+  .highlands-home .header-container { justify-content: center; }
+  .highlands-home .nav-left { order: 3; }
+  .highlands-home .nav-right { margin-left: auto; }
+  .highlands-home .nav-tools li:not(:first-child):not(.lang) { display: none; }
+  .highlands-home .btn-delivery { padding: 8px 14px; font-size: .82rem; }
+  .app-toast { top: 90px; left: 14px; right: 14px; width: auto; }
+  .card { border-radius: 14px !important; }
+  .table { min-width: 680px; }
+  .card:has(> table) { overflow-x: auto !important; }
+  .modal-dialog { margin: 12px; }
+  .modal-body { max-height: 70vh; overflow-y: auto; }
+}
+
+@media (max-width: 575.98px) {
+  .highlands-home .nav-menu { gap: 14px; }
+  .highlands-home .nav-menu a { font-size: .75rem; }
+  .highlands-home .logo img { height: 38px; }
+  .checkout-card, .checkout-summary { padding: 16px !important; }
+  .btn { white-space: normal; }
 }

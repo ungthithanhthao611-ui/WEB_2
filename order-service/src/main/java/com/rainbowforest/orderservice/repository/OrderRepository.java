@@ -6,8 +6,10 @@ import org.springframework.stereotype.Repository;
 import com.rainbowforest.orderservice.domain.Order;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByUserId(Long userId);
+    Optional<Order> findByIdempotencyKey(String idempotencyKey);
 }
