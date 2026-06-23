@@ -9,8 +9,8 @@ export const login = async (data) => {
 
 export const register = async (data) => {
   const parts = data.fullName.trim().split(" ");
-  const firstName = parts[0] || "Phụ";
-  const lastName = parts.slice(1).join(" ") || "Huynh";
+  const firstName = parts[0] || "";
+  const lastName = parts.slice(1).join(" ") || "";
 
   return axiosClient.post("/api/accounts/registration", {
     userName: data.username,
@@ -34,4 +34,20 @@ export const logout = () => {
 
 export const getUserProfile = async (userId) => {
   return axiosClient.get(`/api/accounts/users/${userId}`);
+};
+
+export const forgotPassword = async (email) => {
+  return axiosClient.post("/api/accounts/api/auth/forgot-password", { email });
+};
+
+export const resetPassword = async (email, otp, newPassword) => {
+  return axiosClient.post("/api/accounts/api/auth/reset-password", { email, otp, newPassword });
+};
+
+export const getAllUsers = async () => {
+  return axiosClient.get("/api/accounts/users");
+};
+
+export const deleteUser = async (userId) => {
+  return axiosClient.delete(`/api/accounts/users/${userId}`);
 };

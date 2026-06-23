@@ -66,7 +66,8 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
 
             String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return onError(exchange, "Header Authorization không đúng định dạng Bearer Token", HttpStatus.UNAUTHORIZED);
+                return onError(exchange, "Header Authorization không đúng định dạng Bearer Token",
+                        HttpStatus.UNAUTHORIZED);
             }
 
             String token = authHeader.substring(7);
@@ -82,23 +83,28 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
                 String username = claims.getSubject();
                 String role = claims.get("role", String.class);
 
-                // 3. Phân quyền truy cập dựa trên cấu hình Route (Ví dụ: Route Admin chỉ chấp nhận role ADMIN)
+                // 3. Phân quyền truy cập dựa trên cấu hình Route (Ví dụ: Route Admin chỉ chấp
+                // nhận role ADMIN)
                 if (config.getRequiredRoles() != null && !config.getRequiredRoles().isEmpty()) {
-                    // Chuẩn hóa role của người dùng (bỏ tiền tố "ROLE_" nếu có để so khớp chính xác)
-                    final String cleanUserRole = (role != null && role.toUpperCase().startsWith("ROLE_")) 
-                            ? role.substring(5) 
+                    // Chuẩn hóa role của người dùng (bỏ tiền tố "ROLE_" nếu có để so khớp chính
+                    // xác)
+                    final String cleanUserRole = (role != null && role.toUpperCase().startsWith("ROLE_"))
+                            ? role.substring(5)
                             : role;
 
                     boolean hasRole = config.getRequiredRoles().stream()
                             .map(r -> r.toUpperCase().startsWith("ROLE_") ? r.substring(5) : r)
                             .anyMatch(r -> r.equalsIgnoreCase(cleanUserRole));
-                            
+
                     if (!hasRole) {
-                        return onError(exchange, "Quyền truy cập bị từ chối - Bạn không có quyền truy cập chức năng này", HttpStatus.FORBIDDEN);
+                        return onError(exchange,
+                                "Quyền truy cập bị từ chối - Bạn không có quyền truy cập chức năng này",
+                                HttpStatus.FORBIDDEN);
                     }
                 }
 
-                // 4. Gắn thêm thông tin User và Role vào header của request đi xuống các microservices con (Downstream)
+                // 4. Gắn thêm thông tin User và Role vào header của request đi xuống các
+                // microservices con (Downstream)
                 ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
                         .header("X-User-Name", username)
                         .header("X-User-Roles", role)
@@ -116,7 +122,7 @@ public class JwtAuthenticationFilter extends AbstractGatewayFilterFactory<JwtAut
     private Mono<Void> onError(ServerWebExchange exchange, String err, HttpStatus httpStatus) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(httpStatus);
-        
+
         // Trả về mã lỗi HTTP tương ứng (401 Unauthorized / 403 Forbidden)
         return response.setComplete();
     }

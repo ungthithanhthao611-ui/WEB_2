@@ -67,16 +67,18 @@ public class OrderController {
                 cartService.deleteCart(cartId);
 
                 // Gửi event Kafka
-                try {
-                    Map<String, Object> orderEvent = new HashMap<>();
-                    orderEvent.put("orderId", order.getId());
-                    orderEvent.put("userId", userId);
-                    orderEvent.put("total", order.getTotal());
-                    orderEvent.put("status", order.getStatus());
-                    kafkaTemplate.send("order-events", orderEvent);
-                } catch (Exception ke) {
-                    System.err.println("Lỗi gửi Kafka event: " + ke.getMessage());
-                }
+                java.util.concurrent.CompletableFuture.runAsync(() -> {
+                    try {
+                        Map<String, Object> orderEvent = new HashMap<>();
+                        orderEvent.put("orderId", order.getId());
+                        orderEvent.put("userId", userId);
+                        orderEvent.put("total", order.getTotal());
+                        orderEvent.put("status", order.getStatus());
+                        kafkaTemplate.send("order-events", orderEvent);
+                    } catch (Exception ke) {
+                        System.err.println("Lỗi gửi Kafka event: " + ke.getMessage());
+                    }
+                });
 
                 return new ResponseEntity<Order>(
                 		order, 
@@ -121,19 +123,62 @@ public class OrderController {
     @GetMapping(value = "/order/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboard() {
         List<Order> orders = orderService.getAllOrders();
-        BigDecimal revenue = orders.stream()
-                .filter(order -> "COMPLETED".equals(order.getStatus()))
+        
+        List<Order> completedOrders = orders.stream()
+                .filter(o -> "COMPLETED".equals(o.getStatus()))
+                .toList();
+                
+        BigDecimal revenue = completedOrders.stream()
                 .map(Order::getTotal).filter(java.util.Objects::nonNull)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+                
         long pending = orders.stream().filter(order -> "PENDING_CONFIRMATION".equals(order.getStatus())).count();
-        long completed = orders.stream().filter(order -> "COMPLETED".equals(order.getStatus())).count();
+        long completed = completedOrders.size();
         long cancelled = orders.stream().filter(order -> "CANCELLED".equals(order.getStatus()) || "REJECTED".equals(order.getStatus())).count();
+        
+        // Group revenue by date (last 7 days logic can be done on frontend, here we group all dates)
+        Map<String, BigDecimal> revenueByDate = new HashMap<>();
+        Map<String, Long> categorySales = new HashMap<>();
+
+        for (Order o : completedOrders) {
+            String dateStr = o.getOrderedDate() != null ? o.getOrderedDate().toString() : LocalDate.now().toString();
+            revenueByDate.merge(dateStr, o.getTotal() != null ? o.getTotal() : BigDecimal.ZERO, BigDecimal::add);
+            
+            if (o.getItems() != null) {
+                for (Item item : o.getItems()) {
+                    // Try to guess category from product or use a generic "Other"
+                    // Since Item doesn't store category, we will mock category logic or just group by productName for now if category is missing.
+                    // Wait, Product is attached! Item has getProduct()
+                    String category = (item.getProduct() != null && item.getProduct().getCategory() != null) 
+                                        ? item.getProduct().getCategory() 
+                                        : "Chưa phân loại";
+                    categorySales.merge(category, (long) item.getQuantity(), Long::sum);
+                }
+            }
+        }
+
+        // Format for recharts
+        List<Map<String, Object>> revenueData = new ArrayList<>();
+        revenueByDate.forEach((date, rev) -> {
+            revenueData.add(Map.of("date", date, "revenue", rev));
+        });
+        // Sort by date
+        revenueData.sort((a, b) -> ((String) a.get("date")).compareTo((String) b.get("date")));
+
+        List<Map<String, Object>> categoryData = new ArrayList<>();
+        categorySales.forEach((cat, qty) -> {
+            categoryData.add(Map.of("name", cat, "value", qty));
+        });
+
         return ResponseEntity.ok(Map.of(
                 "totalOrders", orders.size(),
                 "pendingOrders", pending,
                 "completedOrders", completed,
                 "cancelledOrders", cancelled,
-                "revenue", revenue));
+                "revenue", revenue,
+                "revenueData", revenueData,
+                "categoryData", categoryData
+        ));
     }
 
     private Order createOrder(List<Item> cart, User user) {
@@ -144,5 +189,28 @@ public class OrderController {
         order.setOrderedDate(LocalDate.now());
         order.setStatus("PAYMENT_EXPECTED");
         return order;
+    }
+
+    @GetMapping(value = "/order/active-product-check/{productId}")
+    public ResponseEntity<Boolean> checkActiveProduct(@PathVariable("productId") Long productId) {
+        List<Order> orders = orderService.getAllOrders();
+        boolean isActive = orders.stream()
+            .filter(o -> List.of("PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "SHIPPING").contains(o.getStatus()))
+            .anyMatch(o -> o.getItems() != null && o.getItems().stream()
+                .anyMatch(item -> 
+                    (item.getSourceProductId() != null && item.getSourceProductId().equals(productId)) ||
+                    (item.getProduct() != null && item.getProduct().getId() != null && item.getProduct().getId().equals(productId))
+                )
+            );
+        return ResponseEntity.ok(isActive);
+    }
+
+    @GetMapping(value = "/order/pending-count")
+    public ResponseEntity<Integer> getPendingCount() {
+        List<Order> orders = orderService.getAllOrders();
+        int count = (int) orders.stream()
+            .filter(o -> "PENDING_CONFIRMATION".equals(o.getStatus()))
+            .count();
+        return ResponseEntity.ok(count);
     }
 }

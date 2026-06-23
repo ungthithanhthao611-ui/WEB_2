@@ -1,7 +1,39 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { getPendingOrderCount } from "../services/orderService";
+import { showToast } from "../services/shopConfigService";
 
 function AdminSidebar() {
   const location = useLocation();
+  const [pendingCount, setPendingCount] = useState(0);
+  const prevCountRef = useRef(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPendingCount = async () => {
+      try {
+        const res = await getPendingOrderCount();
+        if (isMounted) {
+          const count = res.data || 0;
+          if (count > prevCountRef.current) {
+            showToast("Có đơn hàng mới chờ duyệt!", "success");
+          }
+          prevCountRef.current = count;
+          setPendingCount(count);
+        }
+      } catch (error) {
+        console.error("Lỗi lấy số lượng đơn hàng:", error);
+      }
+    };
+
+    fetchPendingCount(); // Lần đầu tiên chạy luôn
+    const intervalId = setInterval(fetchPendingCount, 10000); // 10 giây 1 lần
+
+    return () => {
+      isMounted = false;
+      clearInterval(intervalId);
+    };
+  }, []);
 
   const menuItems = [
     { path: "/admin", label: "Dashboard", icon: "fa-chart-pie" },
@@ -11,7 +43,6 @@ function AdminSidebar() {
     { path: "/admin/news", label: "Quản lý tin tức", icon: "fa-newspaper" },
     { path: "/admin/banners", label: "Quản lý banner", icon: "fa-images" },
     { path: "/admin/complaints", label: "Tiếp nhận khiếu nại", icon: "fa-comments" },
-    { path: "/admin/support", label: "Trung tâm hỗ trợ", icon: "fa-headset" },
     { path: "/admin/shipping", label: "Cửa hàng & giá cước", icon: "fa-truck-fast" },
     { path: "/admin/vouchers", label: "Quản lý voucher", icon: "fa-ticket" },
     { path: "/admin/users", label: "Quản lý người dùng", icon: "fa-users" },
@@ -50,6 +81,11 @@ function AdminSidebar() {
               >
                 <i className={`fa-solid ${item.icon}`} style={{ opacity: 0.8 }}></i>
                 {item.label}
+                {item.path === "/admin/orders" && pendingCount > 0 && (
+                  <span className="badge bg-warning text-dark ms-auto rounded-pill px-2">
+                    {pendingCount}
+                  </span>
+                )}
               </Link>
             </li>
           );

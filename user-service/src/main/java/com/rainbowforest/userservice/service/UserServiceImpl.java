@@ -57,6 +57,16 @@ public class UserServiceImpl implements UserService {
         return userRepository.save(user);
     }
 
+    @Override
+    public User updateUser(User user) {
+        return userRepository.save(user);
+    }
+
+    @Override
+    public void deleteUser(Long id) {
+        userRepository.deleteById(id);
+    }
+
     @jakarta.annotation.PostConstruct
     public void initData() {
         createRoleIfNotExist("ROLE_ADMIN");

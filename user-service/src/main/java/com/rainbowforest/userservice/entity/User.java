@@ -20,6 +20,12 @@ public class User {
     @Column (name = "active")
     private int active;
 
+    @Column(name = "reset_otp", length = 6)
+    private String resetOtp;
+
+    @Column(name = "reset_otp_expiry")
+    private java.time.LocalDateTime resetOtpExpiry;
+
     @OneToOne (cascade = CascadeType.ALL)
     @JoinColumn (name = "user_details_id")
     private UserDetails userDetails;
@@ -74,5 +80,21 @@ public class User {
 
 	public void setRole(UserRole role) {
 		this.role = role;
+	}
+
+	public String getResetOtp() {
+		return resetOtp;
+	}
+
+	public void setResetOtp(String resetOtp) {
+		this.resetOtp = resetOtp;
+	}
+
+	public java.time.LocalDateTime getResetOtpExpiry() {
+		return resetOtpExpiry;
+	}
+
+	public void setResetOtpExpiry(java.time.LocalDateTime resetOtpExpiry) {
+		this.resetOtpExpiry = resetOtpExpiry;
 	}
 }

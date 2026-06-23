@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import { register } from "../../services/authService";
 
 function RegisterPage() {
@@ -34,7 +35,7 @@ function RegisterPage() {
 
     try {
       await register(form);
-      alert("Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay.");
+      toast.success("Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay.");
       navigate("/login");
     } catch (err) {
       console.error(err);

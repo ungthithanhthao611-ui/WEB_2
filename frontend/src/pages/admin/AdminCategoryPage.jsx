@@ -5,6 +5,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "../../services/productService";
+import { uploadImageToCloudinary } from "../../services/cloudinaryService";
 import AdminLayout from "../../layouts/AdminLayout";
 import { showToast } from "../../services/shopConfigService";
 
@@ -16,6 +17,7 @@ function AdminCategoryPage() {
   const [formMode, setFormMode] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const loadCategories = async () => {
     try {
@@ -37,6 +39,20 @@ function AdminCategoryPage() {
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setForm({ ...form, imageUrl: url });
+    } catch (error) {
+      showToast("Lỗi upload ảnh lên Cloudinary! Vui lòng thử lại.", "error");
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleOpenCreate = () => {
@@ -182,9 +198,28 @@ function AdminCategoryPage() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label fw-semibold">Ảnh danh mục (URL)</label>
-                    <input name="imageUrl" type="url" className="form-control rounded-3" value={form.imageUrl} onChange={handleChange} placeholder="https://..." required />
-                    {form.imageUrl && <img src={form.imageUrl} alt="Xem trước" className="mt-2 rounded-3 w-100" style={{height:140,objectFit:"cover"}} />}
+                    <label className="form-label fw-semibold">Ảnh danh mục (Tải lên)</label>
+                    <div className="d-flex align-items-center gap-3">
+                      <input type="file" accept="image/*" className="form-control rounded-3" onChange={handleImageUpload} disabled={uploadingImage} />
+                      {uploadingImage && (
+                        <div className="spinner-border spinner-border-sm text-danger" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                      )}
+                    </div>
+                    {form.imageUrl && (
+                      <div className="mt-2 position-relative d-inline-block">
+                        <img src={form.imageUrl} alt="Xem trước" className="rounded-3 shadow-sm" style={{ width: "100%", height: "140px", objectFit: "cover" }} />
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle"
+                          style={{ width: "24px", height: "24px", padding: 0 }}
+                          onClick={() => setForm({ ...form, imageUrl: "" })}
+                        >
+                          <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div className="mb-3">
                     <label className="form-label fw-semibold">Mô tả danh mục</label>
@@ -206,7 +241,7 @@ function AdminCategoryPage() {
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn btn-danger rounded-3 px-4 py-2 fw-bold">
+                  <button type="submit" className="btn btn-danger rounded-3 px-4 py-2 fw-bold" disabled={uploadingImage}>
                     {formMode === "create" ? "Lưu Danh Mục" : "Cập Nhật"}
                   </button>
                 </div>

@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -21,10 +22,10 @@ public class RecommendationController {
     private RecommendationService recommendationService;
 
     @Autowired
-    private ProductClient productClient;
+    private com.rainbowforest.recommendationservice.repository.ProductRepository productRepository;
 
     @Autowired
-    private UserClient userClient;
+    private com.rainbowforest.recommendationservice.repository.UserRepository userRepository;
     
     @Autowired
     private HeaderGenerator headerGenerator;
@@ -32,33 +33,55 @@ public class RecommendationController {
     @GetMapping(value = "/recommendations")
     public ResponseEntity<List<Recommendation>> getAllRating(@RequestParam("name") String productName){
         List<Recommendation> recommendations = recommendationService.getAllRecommendationByProductName(productName);
-        if(!recommendations.isEmpty()) {
-        	return new ResponseEntity<List<Recommendation>>(
-        		recommendations,
+        return new ResponseEntity<List<Recommendation>>(
+        		recommendations != null ? recommendations : new ArrayList<>(),
         		headerGenerator.getHeadersForSuccessGetMethod(),
         		HttpStatus.OK);
-        }
+    }
+
+    @GetMapping(value = "/{userId}/recommendations")
+    public ResponseEntity<List<Recommendation>> getRecommendationsByUserId(@PathVariable("userId") Long userId){
+        List<Recommendation> recommendations = recommendationService.getAllRecommendationByUserId(userId);
         return new ResponseEntity<List<Recommendation>>(
-        		headerGenerator.getHeadersForError(),
-        		HttpStatus.NOT_FOUND);
+                recommendations != null ? recommendations : new ArrayList<>(),
+                headerGenerator.getHeadersForSuccessGetMethod(),
+                HttpStatus.OK);
     }
     
     @PostMapping(value = "/{userId}/recommendations/{productId}")
     public ResponseEntity<Recommendation> saveRecommendations(
             @PathVariable ("userId") Long userId,
             @PathVariable ("productId") Long productId,
-            @RequestParam ("rating") int rating,
+            @RequestBody java.util.Map<String, String> payload,
             HttpServletRequest request){
     	
-    	Product product = productClient.getProductById(productId);
-		User user = userClient.getUserById(userId);
+    	Product product = null;
+    	User user = null;
+    	
+    	try {
+    		product = productRepository.findById(productId).orElse(null);
+    	} catch (Exception e) {
+    		System.err.println("Error fetching product: " + e.getMessage());
+    	}
+    	
+    	try {
+    		user = userRepository.findById(userId).orElse(null);
+    	} catch (Exception e) {
+    		System.err.println("Error fetching user: " + e.getMessage());
+    	}
     	
 		if(product != null && user != null) {
 			try {
+				int rating = Integer.parseInt(payload.getOrDefault("rating", "5"));
+				String comment = payload.get("comment");
+				String imageUrl = payload.get("imageUrl");
+
 				Recommendation recommendation = new Recommendation();
 				recommendation.setProduct(product);
 				recommendation.setUser(user);
 				recommendation.setRating(rating);
+				recommendation.setComment(comment);
+				recommendation.setImageUrl(imageUrl);
 				recommendationService.saveRecommendation(recommendation);
 				return new ResponseEntity<Recommendation>(
 						recommendation,

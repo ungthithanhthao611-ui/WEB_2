@@ -20,6 +20,15 @@ public class User {
     @JsonIgnore
     private List<Order> orders;
 
+    @Transient
+    private UserDetailsDTO userDetails;
+
+    public static class UserDetailsDTO {
+        private String email;
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -37,5 +46,13 @@ public class User {
 
     public void setOrders(List<Order> orders) {
         this.orders = orders;
+    }
+
+    public UserDetailsDTO getUserDetails() {
+        return userDetails;
+    }
+
+    public void setUserDetails(UserDetailsDTO userDetails) {
+        this.userDetails = userDetails;
     }
 }

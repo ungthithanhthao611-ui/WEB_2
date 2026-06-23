@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ToastContainer } from 'react-toastify';
+import "react-toastify/dist/ReactToastify.css";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // User Pages
@@ -9,6 +11,7 @@ import CartPage from "./pages/user/CartPage";
 import CheckoutPage from "./pages/user/CheckoutPage";
 import LoginPage from "./pages/user/LoginPage";
 import RegisterPage from "./pages/user/RegisterPage";
+import ForgotPasswordPage from "./pages/user/ForgotPasswordPage";
 import OrderHistoryPage from "./pages/user/OrderHistoryPage";
 import ProfilePage from "./pages/user/ProfilePage";
 import NewsPage from "./pages/user/NewsPage";
@@ -35,14 +38,17 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <>
+      <ToastContainer position="top-right" autoClose={3000} />
+      <BrowserRouter>
+        <Routes>
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/products" element={<ProductListPage />} />
         <Route path="/products/:id" element={<ProductDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/news" element={<NewsPage />} />
         <Route path="/news/:id" element={<NewsDetailPage />} />
         <Route path="/vouchers" element={<VoucherPage />} />
@@ -151,6 +157,7 @@ function App() {
         />
       </Routes>
     </BrowserRouter>
+    </>
   );
 }
 

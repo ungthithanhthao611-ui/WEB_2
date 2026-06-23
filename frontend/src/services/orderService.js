@@ -46,3 +46,6 @@ export const updateOrderStatus = (orderId, status, reason = "") => axiosClient.p
 export const cancelOrder = (orderId, reason) => axiosClient.put(`/api/shop/order/${orderId}/cancel`, {
   userId: sessionStorage.getItem("userId"), reason,
 });
+
+export const checkActiveProduct = (productId) => axiosClient.get(`/api/shop/order/active-product-check/${productId}`);
+export const getPendingOrderCount = () => axiosClient.get("/api/shop/order/pending-count");

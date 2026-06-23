@@ -8,6 +8,8 @@ import {
   getProductVariants,
   saveProductVariants,
 } from "../../services/productService";
+import { checkActiveProduct } from "../../services/orderService";
+import { uploadImageToCloudinary } from "../../services/cloudinaryService";
 import AdminLayout from "../../layouts/AdminLayout";
 
 const EMPTY_FORM = {
@@ -27,6 +29,7 @@ function AdminProductPage() {
   const [formMode, setFormMode] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [hasSale, setHasSale] = useState(false);
   const [sizes, setSizes] = useState([{ name: "M", sku:"", price: "", salePrice: "", stock:0 }, { name: "L", sku:"", price: "", salePrice: "", stock:0 }]);
 
@@ -63,6 +66,20 @@ function AdminProductPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setForm({ ...form, imageUrl: url });
+    } catch (error) {
+      alert("Lỗi upload ảnh lên Cloudinary! Vui lòng thử lại.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   const handleOpenCreate = () => {
     setForm(EMPTY_FORM);
     setHasSale(false);
@@ -72,6 +89,16 @@ function AdminProductPage() {
   };
 
   const handleStartEdit = async (p) => {
+    try {
+      const activeRes = await checkActiveProduct(p.id);
+      if (activeRes.data === true) {
+        alert("Không thể sửa! Sản phẩm này đang nằm trong đơn hàng chưa hoàn tất.");
+        return;
+      }
+    } catch (error) {
+      console.error("Lỗi kiểm tra trạng thái sản phẩm:", error);
+    }
+
     const originalPrice = p.originalPrice || "";
     setEditingProduct(p);
     setForm({
@@ -125,6 +152,16 @@ function AdminProductPage() {
 
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) return;
+
+    try {
+      const activeRes = await checkActiveProduct(id);
+      if (activeRes.data === true) {
+        alert("Không thể xóa! Sản phẩm này đang nằm trong đơn hàng chưa hoàn tất.");
+        return;
+      }
+    } catch (error) {
+      console.error("Lỗi kiểm tra trạng thái sản phẩm:", error);
+    }
 
     try {
       await deleteProduct(id);
@@ -258,15 +295,34 @@ function AdminProductPage() {
         />
       </div>
       <div className="col-md-6">
-        <label className="form-label fw-semibold">Đường dẫn hình ảnh (URL)</label>
-        <input
-          name="imageUrl"
-          type="url"
-          className="form-control rounded-3"
-          placeholder="https://example.com/image.png"
-          value={form.imageUrl}
-          onChange={handleChange}
-        />
+        <label className="form-label fw-semibold">Hình ảnh sản phẩm (Tải lên)</label>
+        <div className="d-flex align-items-center gap-3">
+          <input
+            type="file"
+            accept="image/*"
+            className="form-control rounded-3"
+            onChange={handleImageUpload}
+            disabled={uploadingImage}
+          />
+          {uploadingImage && (
+            <div className="spinner-border spinner-border-sm text-danger" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+          )}
+        </div>
+        {form.imageUrl && (
+          <div className="mt-2 position-relative d-inline-block">
+            <img src={form.imageUrl} alt="Preview" className="rounded-3 shadow-sm" style={{ width: "80px", height: "80px", objectFit: "cover" }} />
+            <button
+              type="button"
+              className="btn btn-sm btn-danger position-absolute top-0 start-100 translate-middle rounded-circle"
+              style={{ width: "24px", height: "24px", padding: 0 }}
+              onClick={() => setForm({ ...form, imageUrl: "" })}
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        )}
       </div>
       <div className="col-12">
         <label className="form-label fw-semibold">Mô tả sản phẩm</label>
@@ -394,7 +450,7 @@ function AdminProductPage() {
                   >
                     Hủy
                   </button>
-                  <button type="submit" className="btn btn-danger rounded-3 px-4 py-2 fw-bold">
+                  <button type="submit" className="btn btn-danger rounded-3 px-4 py-2 fw-bold" disabled={uploadingImage}>
                     {formMode === "create" ? "Lưu Sản Phẩm" : "Cập Nhật"}
                   </button>
                 </div>

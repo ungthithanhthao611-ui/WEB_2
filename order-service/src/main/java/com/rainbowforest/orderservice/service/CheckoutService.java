@@ -133,7 +133,9 @@ public class CheckoutService {
             redemption.setOrderId(saved.getId()); redemption.setDiscountAmount(discount); redemption.setRedeemedAt(LocalDateTime.now());
             redemptionRepository.save(redemption);
         }
-        publish("ORDER_CREATED", saved);
+        
+        String email = remoteUser.getUserDetails() != null ? remoteUser.getUserDetails().getEmail() : remoteUser.getUserName();
+        publish("ORDER_CREATED", saved, email);
         return saved;
     }
 
@@ -165,7 +167,18 @@ public class CheckoutService {
         if (order.getStatusHistory() == null) order.setStatusHistory(new ArrayList<>());
         order.getStatusHistory().add(history);
         Order saved = orderRepository.save(order);
-        publish("ORDER_STATUS_CHANGED", saved);
+        
+        String email = null;
+        if (order.getUser() != null) {
+            try {
+                User remoteUser = userClient.getUserById(order.getUser().getId());
+                email = remoteUser != null && remoteUser.getUserDetails() != null ? remoteUser.getUserDetails().getEmail() : order.getUser().getUserName();
+            } catch (Exception e) {
+                email = order.getUser().getUserName();
+            }
+        }
+        
+        publish("ORDER_STATUS_CHANGED", saved, email);
         return saved;
     }
 
@@ -216,25 +229,39 @@ public class CheckoutService {
         return "HLC-" + LocalDate.now().toString().replace("-", "") + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    private void publish(String eventType, Order order) {
+    private void publish(String eventType, Order order, String email) {
         Map<String, Object> event = new HashMap<>();
         event.put("eventType", eventType);
         event.put("orderId", order.getId());
         event.put("orderCode", order.getOrderCode());
         event.put("userId", order.getUser() == null ? null : order.getUser().getId());
         event.put("recipientName", order.getRecipientName());
-        event.put("email", order.getUser() == null ? null : order.getUser().getUserName());
+        event.put("email", email);
         event.put("total", order.getTotal());
+        event.put("shippingFee", order.getShippingFee());
+        event.put("discount", order.getDiscount());
         event.put("status", order.getStatus());
-        try {
-            kafkaTemplate.send("order-events", order.getOrderCode(), event)
-                    .whenComplete((result, exception) -> {
-                        if (exception != null) {
-                            log.warn("Không gửi được sự kiện {} của đơn {}: {}", eventType, order.getOrderCode(), exception.getMessage());
-                        }
-                    });
-        } catch (RuntimeException exception) {
-            log.warn("Kafka không khả dụng, đơn {} vẫn được xử lý: {}", order.getOrderCode(), exception.getMessage());
+        
+        List<Map<String, Object>> itemPayloads = new ArrayList<>();
+        if (order.getItems() != null) {
+            for (Item item : order.getItems()) {
+                Map<String, Object> itemData = new HashMap<>();
+                itemData.put("productName", item.getProductNameSnapshot());
+                itemData.put("size", item.getSize());
+                itemData.put("quantity", item.getQuantity());
+                itemData.put("unitPrice", item.getUnitPrice());
+                itemData.put("subTotal", item.getSubTotal());
+                itemPayloads.add(itemData);
+            }
         }
+        event.put("items", itemPayloads);
+        
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                userClient.sendOrderInvoiceEmail(event);
+            } catch (Exception exception) {
+                log.warn("Không thể gửi email hóa đơn cho đơn {}: {}", order.getOrderCode(), exception.getMessage());
+            }
+        });
     }
 }

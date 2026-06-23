@@ -1,7 +1,8 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getProductById, getProductVariants } from "../../services/productService";
 import { addToCart } from "../../services/cartService";
+import { getRecommendationsByProduct, saveRecommendation } from "../../services/recommendationService";
 import UserLayout from "../../layouts/UserLayout";
 import { notifyCartChanged, setCartItemMeta, showToast } from "../../services/shopConfigService";
 import "./ProductDetailPage.css";
@@ -15,6 +16,9 @@ function ProductDetailPage() {
   const [sizes, setSizes] = useState([]);
   const [selectedSize, setSelectedSize] = useState(null);
 
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+
   const loadProduct = async () => {
     try {
       const res = await getProductById(id);
@@ -22,6 +26,14 @@ function ProductDetailPage() {
       const variants = (await getProductVariants(res.data.id)).data.filter(item => item.active);
       setSizes(variants);
       setSelectedSize(variants.find(item => Number(item.stock) > 0) || variants[0] || null);
+
+      // Load reviews
+      try {
+        const reviewsRes = await getRecommendationsByProduct(res.data.name);
+        setReviews(reviewsRes.data || []);
+      } catch (err) {
+        console.error("Không tải được đánh giá", err);
+      }
     } catch (error) {
       console.error(error);
     } finally {
@@ -128,6 +140,40 @@ function ProductDetailPage() {
                   </button>
                   <div className="product-benefits"><span><i className="fa-solid fa-bolt"></i> Giao nhanh 30 phút</span><span><i className="fa-solid fa-store"></i> Pha tại cửa hàng gần bạn</span><span><i className="fa-solid fa-shield-heart"></i> Nguyên liệu tuyển chọn</span></div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reviews Section */}
+        {product && (
+          <div className="product-reviews-section mt-5 pt-4 border-top">
+            <h3 className="fw-bold mb-4">Đánh giá & Bình luận</h3>
+            <div className="row justify-content-center">
+              <div className="col-lg-10">
+                {reviews.length === 0 ? (
+                  <p className="text-muted text-center py-4">Chưa có đánh giá nào cho sản phẩm này.</p>
+                ) : (
+                  <div className="reviews-list">
+                    {reviews.map((rev) => (
+                      <div key={rev.id} className="review-card p-4 mb-3 border rounded-4 shadow-sm bg-white">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <strong className="text-danger fs-5">{rev.user?.userName || "Người dùng ẩn danh"}</strong>
+                          <span className="text-muted small">
+                            {rev.createdAt ? new Date(rev.createdAt).toLocaleDateString("vi-VN") : ""}
+                          </span>
+                        </div>
+                        <div className="text-warning mb-3 fs-5">
+                          {"★".repeat(rev.rating)}{"☆".repeat(5 - rev.rating)}
+                        </div>
+                        <p className="mb-3 fs-6">{rev.comment}</p>
+                        {rev.imageUrl && (
+                          <img src={rev.imageUrl} alt="Review attachment" className="img-thumbnail rounded-3" style={{ maxHeight: "200px" }} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

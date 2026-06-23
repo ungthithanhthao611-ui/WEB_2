@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { getUserProfile } from "../../services/authService";
+import { getRecommendationsByUser } from "../../services/recommendationService";
 import UserLayout from "../../layouts/UserLayout";
 
 function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reviews, setReviews] = useState([]);
 
   const loadProfile = async () => {
     const userId = sessionStorage.getItem("userId");
@@ -14,6 +16,9 @@ function ProfilePage() {
     try {
       const res = await getUserProfile(userId);
       setProfile(res.data);
+      
+      const reviewRes = await getRecommendationsByUser(userId);
+      setReviews(reviewRes.data || []);
     } catch (err) {
       console.error("Lỗi lấy thông tin tài khoản:", err);
       setError("Không thể tải thông tin tài khoản!");
@@ -74,13 +79,55 @@ function ProfilePage() {
                 </span>
               </div>
 
-              <div className="text-center">
+              <div className="text-center mt-4">
                 <p className="text-muted" style={{ fontSize: "0.85rem" }}>Cảm ơn bạn đã đồng hành cùng Highlands Coffee. Mỗi ly cà phê là một trải nghiệm đậm đà vị Việt.</p>
                 <a href="/orders" className="btn btn-outline-danger rounded-pill px-4">Theo dõi đơn hàng</a>
               </div>
             </div>
           )}
         </div>
+
+        {/* My Reviews Section */}
+        {!loading && !error && profile && (
+          <div className="card shadow-sm border-0 rounded-5 p-4 bg-white mt-4 mb-5">
+            <h4 className="fw-bold mb-4 text-dark"><i className="fa-solid fa-star text-warning me-2"></i>Lịch sử đánh giá của tôi</h4>
+            {reviews.length === 0 ? (
+              <div className="alert alert-light text-center border rounded-4 py-4">
+                <i className="fa-regular fa-comment-dots fs-1 text-muted mb-3"></i>
+                <p className="text-muted mb-0">Bạn chưa viết đánh giá nào.</p>
+              </div>
+            ) : (
+              <div className="row g-4">
+                {reviews.map((r, idx) => (
+                  <div className="col-md-6" key={r.id || idx}>
+                    <div className="card h-100 border rounded-4 p-3 shadow-sm" style={{ backgroundColor: "#fdfdfd" }}>
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <div className="fw-bold text-dark">{r.product?.productName || "Sản phẩm"}</div>
+                        <div className="text-warning small">
+                          {[...Array(5)].map((_, i) => (
+                            <i key={i} className={i < r.rating ? "fa-solid fa-star" : "fa-regular fa-star"}></i>
+                          ))}
+                        </div>
+                      </div>
+                      <small className="text-muted mb-2 d-block">
+                        <i className="fa-regular fa-calendar me-1"></i> 
+                        {r.createdAt ? new Date(r.createdAt).toLocaleDateString("vi-VN") : "Gần đây"}
+                      </small>
+                      <p className="mb-3 flex-grow-1" style={{ fontSize: "0.95rem" }}>
+                        "{r.comment}"
+                      </p>
+                      {r.imageUrl && (
+                        <div className="mt-auto">
+                          <img src={r.imageUrl} alt="Review" className="img-fluid rounded-3" style={{ maxHeight: "120px", objectFit: "cover" }} />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </UserLayout>
   );
