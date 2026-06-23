@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class CategoryController {
@@ -20,23 +21,25 @@ public class CategoryController {
     @Autowired
     private HeaderGenerator headerGenerator;
 
-    @GetMapping("/products/categories")
-    public ResponseEntity<List<Category>> getAllCategories() {
-        List<Category> categories = categoryService.getAllCategories();
-        if (!categories.isEmpty()) {
+    @GetMapping("/categories")
+    public ResponseEntity<?> getAllCategories() {
+        try {
+            List<Category> categories = categoryService.getAllCategories();
             return new ResponseEntity<>(
                     categories,
                     headerGenerator.getHeadersForSuccessGetMethod(),
                     HttpStatus.OK
             );
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ResponseEntity<>(
+                    Map.of("error", e.getMessage(), "type", e.getClass().getName()),
+                    HttpStatus.BAD_REQUEST
+            );
         }
-        return new ResponseEntity<>(
-                headerGenerator.getHeadersForError(),
-                HttpStatus.NOT_FOUND
-        );
     }
 
-    @GetMapping("/products/categories/{id}")
+    @GetMapping("/categories/{id}")
     public ResponseEntity<Category> getCategoryById(@PathVariable("id") Long id) {
         Category category = categoryService.getCategoryById(id);
         if (category != null) {

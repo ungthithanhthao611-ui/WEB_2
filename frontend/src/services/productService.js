@@ -14,7 +14,7 @@ const withCategoryImages = (response) => {
 };
 
 export const getProducts = async () => {
-  return axiosClient.get("/api/catalog/admin/products");
+  return axiosClient.get("/api/catalog/products");
 };
 
 export const getAdminProducts = async () => {
@@ -41,7 +41,7 @@ export const getProductVariants = (id, admin = false) => axiosClient.get(`/api/c
 export const saveProductVariants = (id, variants) => axiosClient.put(`/api/catalog/admin/products/${id}/variants`, variants);
 
 export const getCategories = async () => {
-  return withCategoryImages(await axiosClient.get("/api/catalog/admin/categories"));
+  return withCategoryImages(await axiosClient.get("/api/catalog/categories"));
 };
 
 export const getAdminCategories = async () => {

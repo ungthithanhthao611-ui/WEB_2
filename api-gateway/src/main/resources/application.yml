@@ -24,24 +24,65 @@ spring:
             - Path=/api/accounts/**
           filters:
             - StripPrefix=2
+
+        # 1. Các API Quản trị sản phẩm và danh mục (Chỉ ADMIN truy cập)
+        - id: product-catalog-admin
+          uri: lb://product-catalog-service
+          predicates:
+            - Path=/api/catalog/admin/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: ADMIN
+
+        # 2. Các API xem sản phẩm / menu công khai (Public)
         - id: product-catalog-service
-          uri: http://localhost:8810
+          uri: lb://product-catalog-service
           predicates:
             - Path=/api/catalog/**
           filters:
             - StripPrefix=2
-        - id: order-service
-          uri: http://localhost:8813
+
+        # 3. Các API thống kê báo cáo đặt hàng (Chỉ ADMIN truy cập)
+        - id: order-service-admin
+          uri: lb://order-service
+          predicates:
+            - Path=/api/shop/order/dashboard
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: ADMIN
+
+        # 4. Các API đặt hàng / checkout (Cần tài khoản USER hoặc ADMIN)
+        - id: order-service-user
+          uri: lb://order-service
+          predicates:
+            - Path=/api/shop/orders/checkout, /api/shop/order/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: USER, ADMIN
+
+        # 5. Các API giỏ hàng và dữ liệu khác (Public hoặc phân quyền tùy ý)
+        - id: order-service-public
+          uri: lb://order-service
           predicates:
             - Path=/api/shop/**
           filters:
             - StripPrefix=2
+
         - id: product-recommendation-service
           uri: lb://product-recommendation-service
           predicates:
             - Path=/api/review/**
           filters:
             - StripPrefix=2
+
+jwt:
+  secret: 9a4f2c8d3b7a1e5f8g9h0i1j2k3l4m5n6o7p8q9r0s1t2u3v4w5x6y7z8a9b0c1d
 
 eureka:
   client:

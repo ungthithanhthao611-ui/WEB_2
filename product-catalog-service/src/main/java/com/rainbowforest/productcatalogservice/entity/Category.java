@@ -24,7 +24,7 @@ public class Category {
     private String imageUrl;
 
     @Column(name = "admin_managed")
-    private boolean adminManaged = false;
+    private Boolean adminManaged = false;
 
     public Category() {
     }
@@ -67,10 +67,10 @@ public class Category {
     }
 
     public boolean isAdminManaged() {
-        return adminManaged;
+        return Boolean.TRUE.equals(adminManaged);
     }
 
-    public void setAdminManaged(boolean adminManaged) {
+    public void setAdminManaged(Boolean adminManaged) {
         this.adminManaged = adminManaged;
     }
 }

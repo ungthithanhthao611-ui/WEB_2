@@ -10,7 +10,7 @@ import com.rainbowforest.orderservice.dto.InventoryItemRequest;
 
 import com.rainbowforest.orderservice.domain.Product;
 
-@FeignClient(name = "product-catalog-service", url = "http://localhost:8810/")
+@FeignClient(name = "product-catalog-service")
 public interface ProductClient {
 
     @GetMapping(value = "/products/{id}")
