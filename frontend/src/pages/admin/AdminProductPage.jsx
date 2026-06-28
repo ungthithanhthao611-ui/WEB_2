@@ -343,7 +343,6 @@ function AdminProductPage() {
       <div className="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div>
           <h2 className="fw-bold mb-1">Quản Lý Sản Phẩm</h2>
-          <p className="text-muted mb-0">Chỉ hiển thị sản phẩm do admin thêm vào hệ thống</p>
         </div>
         <button
           className="btn btn-danger rounded-pill px-4 py-2 fw-bold"

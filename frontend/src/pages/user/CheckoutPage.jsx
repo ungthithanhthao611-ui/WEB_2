@@ -5,9 +5,22 @@ import { getCart } from "../../services/cartService";
 import UserLayout from "../../layouts/UserLayout";
 import { getCartMeta, getSavedVoucherCodes, getShippingConfig, showToast } from "../../services/shopConfigService";
 import { fetchShippingConfig, fetchVouchers } from "../../services/commerceService";
+import { getUserProfile } from "../../services/authService";
 import "./CheckoutPage.css";
 
 const districts = ["Quận 1", "Quận 3", "Quận 4", "Quận 5", "Quận 7", "Quận 10", "Bình Thạnh", "Phú Nhuận", "Tân Bình", "Thủ Đức"];
+const MOCK_STORES = {
+  "Quận 1": ["Highlands Nguyễn Huệ - Quận 1", "Highlands Lê Lợi - Quận 1", "Highlands Pasteur - Quận 1"],
+  "Quận 3": ["Highlands CMT8 - Quận 3", "Highlands Võ Văn Tần - Quận 3"],
+  "Quận 4": ["Highlands Hoàng Diệu - Quận 4", "Highlands Khánh Hội - Quận 4"],
+  "Quận 5": ["Highlands Nguyễn Trãi - Quận 5", "Highlands Trần Hưng Đạo - Quận 5"],
+  "Quận 7": ["Highlands Nguyễn Thị Thập - Quận 7", "Highlands Crescent Mall - Quận 7"],
+  "Quận 10": ["Highlands Sư Vạn Hạnh - Quận 10", "Highlands Vạn Hạnh Mall - Quận 10"],
+  "Bình Thạnh": ["Highlands Landmark 81 - Bình Thạnh", "Highlands Phan Đăng Lưu - Bình Thạnh"],
+  "Phú Nhuận": ["Highlands Phan Xích Long - Phú Nhuận", "Highlands Nguyễn Văn Trỗi - Phú Nhuận"],
+  "Tân Bình": ["Highlands Cộng Hòa - Tân Bình", "Highlands Hoàng Văn Thụ - Tân Bình"],
+  "Thủ Đức": ["Highlands Võ Văn Ngân - Thủ Đức", "Highlands Gigamall - Thủ Đức"]
+};
 const payments = [["COD", "Thanh toán khi nhận hàng (COD)", "fa-money-bill-wave"]];
 
 function CheckoutPage() {
@@ -29,21 +42,51 @@ function CheckoutPage() {
       setShippingConfig(config);
       setForm((current) => ({
         ...current,
-        store: config.stores.includes(current.store) ? current.store : config.stores[0] || "",
+        store: config.stores?.includes(current.store) ? current.store : config.stores?.[0] || "",
         shippingMethod: config.methods.some((method) => method.id === current.shippingMethod) ? current.shippingMethod : config.methods[0]?.id || "",
       }));
     };
     refresh();
     getCart().then((response) => setCart(response.data || [])).catch(() => setCart([]));
     fetchVouchers().then(response => setVouchers(response.data || [])).catch(() => setVouchers([]));
+    
+    const userId = sessionStorage.getItem("userId");
+    if (userId) {
+      getUserProfile(userId).then(res => {
+        const user = res.data;
+        if (user && user.userDetails) {
+          const { firstName, lastName, phoneNumber, street, streetNumber, locality } = user.userDetails;
+          setForm(current => {
+            const next = { ...current };
+            if (!next.name) next.name = `${firstName || ""} ${lastName || ""}`.trim();
+            if (!next.phone) next.phone = phoneNumber || "";
+            if (!next.address) next.address = street ? `${streetNumber ? streetNumber + " " : ""}${street}` : "";
+            if (locality && districts.includes(locality)) next.district = locality;
+            return next;
+          });
+        }
+      }).catch(err => console.error("Lỗi lấy thông tin user:", err));
+    }
+
     window.addEventListener("shipping-config-updated", refresh);
     return () => window.removeEventListener("shipping-config-updated", refresh);
   }, []);
 
   const handleChange = ({ target: { name, value } }) => {
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => {
+      const next = { ...current, [name]: value };
+      if (name === "district") {
+        const available = MOCK_STORES[value] || [`Highlands Trung Tâm - ${value}`];
+        next.store = available[0];
+      }
+      return next;
+    });
     setErrors((current) => ({ ...current, [name]: "" }));
   };
+
+  const availableStores = useMemo(() => {
+    return MOCK_STORES[form.district] || [`Highlands Trung Tâm - ${form.district}`];
+  }, [form.district]);
 
   const cartMeta = getCartMeta();
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(cartMeta[item.product?.id]?.price || item.product?.price || 0) * Number(item.quantity || 0), 0), [cart, cartMeta]);
@@ -110,7 +153,7 @@ function CheckoutPage() {
         <div className="col-md-6"><label>Số điện thoại <b className="text-danger">*</b></label><input name="phone" className={`form-control ${errors.phone ? "is-invalid" : ""}`} value={form.phone} onChange={handleChange} placeholder="09xxxxxxxx" inputMode="numeric"/><ErrorText field="phone"/></div>
         <div className="col-12"><label>Số nhà, tên đường <b className="text-danger">*</b></label><input name="address" className={`form-control ${errors.address ? "is-invalid" : ""}`} value={form.address} onChange={handleChange} placeholder="Ví dụ: 123 Nguyễn Thị Minh Khai"/><ErrorText field="address"/></div>
         <div className="col-md-6"><label>Quận/Huyện <b className="text-danger">*</b></label><select name="district" className={`form-select ${errors.district ? "is-invalid" : ""}`} value={form.district} onChange={handleChange}>{districts.map((item) => <option key={item}>{item}</option>)}</select><ErrorText field="district"/></div>
-        <div className="col-md-6"><label>Cửa hàng chuẩn bị đơn <b className="text-danger">*</b></label><select name="store" className={`form-select ${errors.store ? "is-invalid" : ""}`} value={form.store} onChange={handleChange}><option value="">-- Chọn cửa hàng --</option>{shippingConfig.stores.map((item) => <option key={item}>{item}</option>)}</select><ErrorText field="store"/></div>
+        <div className="col-md-6"><label>Cửa hàng chuẩn bị đơn <b className="text-danger">*</b></label><select name="store" className={`form-select ${errors.store ? "is-invalid" : ""}`} value={form.store} onChange={handleChange}><option value="">-- Chọn cửa hàng --</option>{availableStores.map((item) => <option key={item}>{item}</option>)}</select><ErrorText field="store"/></div>
         <div className="col-12"><label>Ghi chú cho cửa hàng</label><textarea name="note" className="form-control" rows="2" value={form.note} onChange={handleChange} placeholder="Ít đá, ít đường, gọi trước khi giao..."/></div>
       </div></section>
       <section className={`checkout-card ${errors.shippingMethod ? "checkout-section-error" : ""}`}><h4><span>2</span>Chọn hình thức giao <b className="text-danger">*</b></h4><div className="shipping-grid">{shippingConfig.methods.map((method) => <label className={`shipping-option ${form.shippingMethod === method.id ? "selected" : ""}`} key={method.id}><input type="radio" name="shippingMethod" value={method.id} checked={form.shippingMethod === method.id} onChange={handleChange}/><div><b>{method.name}</b><small><i className="fa-regular fa-clock"></i> {method.eta}</small></div><strong>{Number(method.fee).toLocaleString("vi-VN")}đ</strong></label>)}</div><ErrorText field="shippingMethod"/></section>

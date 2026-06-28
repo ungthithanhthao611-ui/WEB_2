@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getUserProfile } from "../../services/authService";
 import { getRecommendationsByUser } from "../../services/recommendationService";
 import UserLayout from "../../layouts/UserLayout";
+import "./ProfilePage.css";
 
 function ProfilePage() {
   const [profile, setProfile] = useState(null);
@@ -33,11 +35,11 @@ function ProfilePage() {
 
   return (
     <UserLayout>
-      <div className="container mt-4" style={{ maxWidth: "600px" }}>
-        <div className="card shadow-sm border-0 rounded-5 p-4 bg-white">
-          <div className="text-center mb-4">
-            <h3 className="fw-extrabold text-danger mb-1">THÔNG TIN TÀI KHOẢN</h3>
-            <p className="text-muted">Thông tin thành viên Highlands Coffee</p>
+      <div className="container mt-4 pb-5 profile-page-container">
+        <div className="profile-card">
+          <div className="profile-header">
+            <h3 className="profile-title">THÔNG TIN TÀI KHOẢN</h3>
+            <div className="profile-subtitle">Thông tin thành viên Highlands Coffee</div>
           </div>
 
           {loading ? (
@@ -51,53 +53,90 @@ function ProfilePage() {
           ) : !profile ? (
             <div className="alert alert-warning rounded-3">Không tìm thấy thông tin tài khoản!</div>
           ) : (
-            <div>
-              <div className="d-flex align-items-center gap-3 mb-4 p-3 bg-light rounded-4">
-                <div className="bg-danger text-white rounded-circle d-flex align-items-center justify-content-center" style={{ width: "60px", height: "60px" }}>
-                  <i className="fa-solid fa-user fs-3"></i>
+            <>
+              <div className="profile-banner">
+                <img src="https://images.unsplash.com/photo-1559925393-8be0ec4767c8?q=80&w=1000&auto=format&fit=crop" alt="Banner" className="profile-banner-img" />
+                <div className="profile-banner-content">
+                  <div className="profile-avatar-wrapper">
+                    <div className="profile-avatar">
+                      <i className="fa-solid fa-user"></i>
+                    </div>
+                  </div>
+                  <div className="profile-user-info">
+                    <h4>{profile.userDetails ? `${profile.userDetails.firstName} ${profile.userDetails.lastName}` : profile.userName}</h4>
+                    <span className="profile-role-badge">{profile.role ? profile.role.roleName : "ROLE_USER"}</span>
+                  </div>
                 </div>
-                <div>
-                  <h5 className="fw-bold text-dark mb-0">{profile.userDetails ? `${profile.userDetails.firstName} ${profile.userDetails.lastName}` : "Chưa cập nhật"}</h5>
-                  <span className="badge bg-warning text-dark fw-bold">{profile.role ? profile.role.roleName : "ROLE_USER"}</span>
+              </div>
+
+              <div className="profile-info-list">
+                <div className="profile-info-item">
+                  <div className="profile-info-icon"><i className="fa-regular fa-user"></i></div>
+                  <div className="profile-info-text">
+                    <div className="profile-info-label">Tên đăng nhập</div>
+                    <div className="profile-info-value">{profile.userName}</div>
+                  </div>
+                </div>
+
+                <div className="profile-info-item">
+                  <div className="profile-info-icon"><i className="fa-regular fa-envelope"></i></div>
+                  <div className="profile-info-text">
+                    <div className="profile-info-label">Email khách hàng</div>
+                    <div className="profile-info-value">{profile.userDetails ? profile.userDetails.email : "N/A"}</div>
+                  </div>
+                </div>
+
+                <div className="profile-info-item">
+                  <div className="profile-info-icon"></div>
+                  <div className="profile-info-text">
+                    <div className="profile-info-label">Trạng thái tài khoản</div>
+                    <div className="profile-info-value">
+                      {profile.active === 1 ? (
+                        <span className="status-badge"><i className="fa-solid fa-circle-check"></i> Hoạt động</span>
+                      ) : (
+                        <span className="status-badge bg-secondary"><i className="fa-solid fa-ban"></i> Tạm khóa</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="mb-3 border-bottom pb-2">
-                <span className="text-muted d-block" style={{ fontSize: "0.85rem" }}>Tên đăng nhập</span>
-                <span className="fw-bold text-dark fs-6">{profile.userName}</span>
-              </div>
+              <p className="profile-footer-text">
+                Cảm ơn bạn đã đồng hành cùng Highlands Coffee. Mỗi ly cà phê là một trải nghiệm đậm đà vị Việt.
+              </p>
 
-              <div className="mb-3 border-bottom pb-2">
-                <span className="text-muted d-block" style={{ fontSize: "0.85rem" }}>Email khách hàng</span>
-                <span className="fw-bold text-dark fs-6">{profile.userDetails ? profile.userDetails.email : "N/A"}</span>
+              <div className="profile-actions">
+                <Link to="/orders" className="btn-profile-outline">
+                  <i className="fa-solid fa-bag-shopping"></i> Đơn hàng
+                </Link>
+                <Link to="/wishlist" className="btn-profile-solid">
+                  <i className="fa-solid fa-heart"></i> Yêu thích
+                </Link>
+                <Link to="/notifications" className="btn-profile-outline bg-light">
+                  <i className="fa-regular fa-bell"></i> Thông báo
+                </Link>
               </div>
-
-              <div className="mb-4 border-bottom pb-2">
-                <span className="text-muted d-block" style={{ fontSize: "0.85rem" }}>Trạng thái tài khoản</span>
-                <span className={`badge ${profile.active === 1 ? 'bg-success' : 'bg-secondary'} px-3 py-1.5 rounded-pill`}>
-                  {profile.active === 1 ? "Hoạt động" : "Tạm khóa"}
-                </span>
-              </div>
-
-              <div className="text-center mt-4">
-                <p className="text-muted" style={{ fontSize: "0.85rem" }}>Cảm ơn bạn đã đồng hành cùng Highlands Coffee. Mỗi ly cà phê là một trải nghiệm đậm đà vị Việt.</p>
-                <a href="/orders" className="btn btn-outline-danger rounded-pill px-4">Theo dõi đơn hàng</a>
-              </div>
-            </div>
+            </>
           )}
         </div>
 
         {/* My Reviews Section */}
         {!loading && !error && profile && (
-          <div className="card shadow-sm border-0 rounded-5 p-4 bg-white mt-4 mb-5">
-            <h4 className="fw-bold mb-4 text-dark"><i className="fa-solid fa-star text-warning me-2"></i>Lịch sử đánh giá của tôi</h4>
+          <div className="profile-card">
+            <h3 className="reviews-section-title"><i className="fa-solid fa-star text-warning"></i> Lịch sử đánh giá của tôi</h3>
+            
             {reviews.length === 0 ? (
-              <div className="alert alert-light text-center border rounded-4 py-4">
-                <i className="fa-regular fa-comment-dots fs-1 text-muted mb-3"></i>
-                <p className="text-muted mb-0">Bạn chưa viết đánh giá nào.</p>
+              <div className="empty-reviews-banner">
+                <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=1000&auto=format&fit=crop" alt="Tea Plantation" className="empty-reviews-bg" />
+                <div className="empty-reviews-content">
+                  <i className="fa-regular fa-comment-dots"></i>
+                  <p>Bạn chưa viết đánh giá nào.</p>
+                  <small>Khám phá sản phẩm và chia sẻ trải nghiệm của bạn!</small>
+                  <Link to="/products">Khám phá ngay</Link>
+                </div>
               </div>
             ) : (
-              <div className="row g-4">
+              <div className="row g-4 mt-1 position-relative" style={{ zIndex: 1 }}>
                 {reviews.map((r, idx) => (
                   <div className="col-md-6" key={r.id || idx}>
                     <div className="card h-100 border rounded-4 p-3 shadow-sm" style={{ backgroundColor: "#fdfdfd" }}>

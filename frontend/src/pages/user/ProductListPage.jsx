@@ -5,10 +5,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import UserLayout from "../../layouts/UserLayout";
 import { notifyCartChanged, showToast } from "../../services/shopConfigService";
 import { fetchBanners } from "../../services/commerceService";
+import { getWishlist, addToWishlist, removeFromWishlist } from "../../services/authService";
 
 function ProductListPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [wishlist, setWishlist] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [pageBanner, setPageBanner] = useState(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,8 +73,42 @@ function ProductListPage() {
     }
   };
 
+  const loadWishlist = async () => {
+    const userId = sessionStorage.getItem("userId");
+    if (userId) {
+      try {
+        const res = await getWishlist(userId);
+        setWishlist(new Set(res.data));
+      } catch (error) {
+        console.error("Lỗi lấy wishlist:", error);
+      }
+    }
+  };
+
+  const handleToggleWishlist = async (productId) => {
+    const userId = sessionStorage.getItem("userId");
+    if (!userId) {
+      showToast("Vui lòng đăng nhập để lưu sản phẩm yêu thích!", "error");
+      return;
+    }
+    try {
+      if (wishlist.has(productId)) {
+        await removeFromWishlist(userId, productId);
+        setWishlist(prev => { const next = new Set(prev); next.delete(productId); return next; });
+        showToast("Đã bỏ yêu thích");
+      } else {
+        await addToWishlist(userId, productId);
+        setWishlist(prev => { const next = new Set(prev); next.add(productId); return next; });
+        showToast("Đã thêm vào yêu thích");
+      }
+    } catch (error) {
+      showToast("Lỗi cập nhật yêu thích", "error");
+    }
+  };
+
   useEffect(() => {
     loadProducts();
+    loadWishlist();
   }, [categoryId, saleOnly, priceRange]);
 
   useEffect(() => {
@@ -157,6 +193,13 @@ function ProductListPage() {
               return (
                 <div className="col-12 col-sm-6 col-xl-4" key={p.id}>
                   <div className="card h-100 product-card position-relative p-2 border-0 shadow-sm rounded-4">
+                    <button
+                      className="btn btn-light position-absolute top-0 end-0 m-2 rounded-circle shadow-sm"
+                      style={{ width: "36px", height: "36px", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}
+                      onClick={(e) => { e.preventDefault(); handleToggleWishlist(p.id); }}
+                    >
+                      <i className={`fa-heart ${wishlist.has(p.id) ? "fa-solid text-danger" : "fa-regular text-secondary"}`}></i>
+                    </button>
                     {hasDiscount && (
                       <span className="toy-badge-discount">-{discountPercentage}%</span>
                     )}

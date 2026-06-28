@@ -14,6 +14,8 @@ import RegisterPage from "./pages/user/RegisterPage";
 import ForgotPasswordPage from "./pages/user/ForgotPasswordPage";
 import OrderHistoryPage from "./pages/user/OrderHistoryPage";
 import ProfilePage from "./pages/user/ProfilePage";
+import WishlistPage from "./pages/user/WishlistPage";
+import NotificationPage from "./pages/user/NotificationPage";
 import NewsPage from "./pages/user/NewsPage";
 import NewsDetailPage from "./pages/user/NewsDetailPage";
 import VoucherPage from "./pages/user/VoucherPage";
@@ -54,6 +56,7 @@ function App() {
         <Route path="/vouchers" element={<VoucherPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route path="/wishlist" element={<WishlistPage />} />
 
         {/* User Protected Routes */}
         <Route
@@ -86,6 +89,15 @@ function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationPage />
             </ProtectedRoute>
           }
         />

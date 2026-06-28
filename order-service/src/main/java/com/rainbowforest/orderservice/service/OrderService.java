@@ -9,4 +9,5 @@ public interface OrderService {
     public List<Order> getAllOrders();
     public List<Order> getOrdersByUserId(Long userId);
     public Order updateOrderStatus(Long orderId, String status);
+    public Order getOrderById(Long orderId);
 }

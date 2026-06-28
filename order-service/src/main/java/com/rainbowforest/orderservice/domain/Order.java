@@ -47,6 +47,9 @@ public class Order {
     @Column(length = 1000) private String note;
     private String cancellationReason;
     private LocalDateTime createdAt;
+    
+    private Long problemItemId;
+    @Column(length = 1000) private String problemReason;
 
     @ManyToMany (cascade = CascadeType.ALL)
     @JoinTable (name = "cart" , joinColumns = @JoinColumn(name = "order_id"), inverseJoinColumns = @JoinColumn (name = "item_id"))
@@ -149,4 +152,8 @@ public class Order {
     public void setCreatedAt(LocalDateTime value) { this.createdAt = value; }
     public List<OrderStatusHistory> getStatusHistory() { return statusHistory; }
     public void setStatusHistory(List<OrderStatusHistory> value) { this.statusHistory = value; }
+    public Long getProblemItemId() { return problemItemId; }
+    public void setProblemItemId(Long problemItemId) { this.problemItemId = problemItemId; }
+    public String getProblemReason() { return problemReason; }
+    public void setProblemReason(String problemReason) { this.problemReason = problemReason; }
 }

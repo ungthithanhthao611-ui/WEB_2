@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { cancelOrder, getOrdersByUser } from "../../services/orderService";
+import { cancelOrder, getOrdersByUser, resolveOrderIssue } from "../../services/orderService";
 import UserLayout from "../../layouts/UserLayout";
 import { createComplaint } from "../../services/contentService";
 import { showToast } from "../../services/shopConfigService";
 import { saveRecommendation } from "../../services/recommendationService";
+import { getProducts } from "../../services/productService";
+import { Link } from "react-router-dom";
 
 function OrderHistoryPage() {
   const [orders, setOrders] = useState([]);
@@ -21,7 +23,7 @@ function OrderHistoryPage() {
 
   const statusSteps = ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "SHIPPING", "COMPLETED"];
   const statusLabels = ["Chờ xác nhận", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Đã giao"];
-  const statusText = { PENDING_CONFIRMATION:"Chờ xác nhận", CONFIRMED:"Đã xác nhận", PREPARING:"Đang chuẩn bị", SHIPPING:"Đang giao", COMPLETED:"Đã giao", CANCELLED:"Đã hủy", REJECTED:"Bị từ chối" };
+  const statusText = { PENDING_CONFIRMATION:"Chờ xác nhận", CONFIRMED:"Đã xác nhận", PREPARING:"Đang chuẩn bị", SHIPPING:"Đang giao", COMPLETED:"Đã giao", CANCELLED:"Đã hủy", REJECTED:"Bị từ chối", PENDING_USER_DECISION:"Chờ quyết định" };
 
   const submitComplaint = (event) => {
     event.preventDefault();
@@ -59,17 +61,31 @@ function OrderHistoryPage() {
     }
   };
 
+  const [products, setProducts] = useState([]);
+  const [activeTab, setActiveTab] = useState("PROCESSING");
+
   const loadOrders = async () => {
     const userId = sessionStorage.getItem("userId");
     if (!userId) return;
 
     try {
       const res = await getOrdersByUser(userId);
-      setOrders(res.data);
+      // Sort orders by ID descending (newest first)
+      const sorted = (res.data || []).sort((a, b) => b.id - a.id);
+      setOrders(sorted);
     } catch (error) {
       console.error("Lỗi lấy lịch sử đơn hàng:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      const res = await getProducts();
+      setProducts(res.data || []);
+    } catch (err) {
+      console.error("Lỗi lấy sản phẩm:", err);
     }
   };
 
@@ -84,14 +100,62 @@ function OrderHistoryPage() {
     catch (error) { showToast(error.response?.data?.message || "Không thể hủy đơn hàng", "error"); }
   };
 
+  const handleResolveIssue = async (orderId, action) => {
+    const userId = sessionStorage.getItem("userId");
+    try {
+      const response = await resolveOrderIssue(orderId, userId, action);
+      setOrders((current) => current.map((order) => order.id === orderId ? response.data : order));
+      if (action === "CONTINUE") {
+        showToast("Đã xác nhận tiếp tục đơn hàng.");
+      } else {
+        showToast("Đã hủy đơn hàng thành công.");
+      }
+    } catch (error) {
+      showToast(error.response?.data?.message || "Lỗi khi xử lý", "error");
+    }
+  };
+
   useEffect(() => {
     loadOrders();
+    loadProducts();
   }, []);
+
+  const getFilteredOrders = () => {
+    if (activeTab === "ALL") return orders;
+    if (activeTab === "PROCESSING") return orders.filter(o => ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "SHIPPING", "PENDING_USER_DECISION"].includes(o.status));
+    if (activeTab === "COMPLETED") return orders.filter(o => o.status === "COMPLETED");
+    if (activeTab === "CANCELLED") return orders.filter(o => ["CANCELLED", "REJECTED"].includes(o.status));
+    return orders;
+  };
+
+  const filteredOrders = getFilteredOrders();
 
   return (
     <UserLayout>
-      <div className="container mt-4">
-        <h2 className="fw-bold mb-4">Lịch Sử Mua Hàng</h2>
+      <div className="container mt-4 pb-5">
+        <div className="d-flex align-items-center mb-4 gap-3">
+          <Link to="/profile" className="btn btn-light rounded-circle shadow-sm d-flex align-items-center justify-content-center" style={{ width: "42px", height: "42px" }}>
+            <i className="fa-solid fa-arrow-left"></i>
+          </Link>
+          <h2 className="fw-bold mb-0">Lịch Sử Mua Hàng</h2>
+        </div>
+
+        <div className="card shadow-sm border-0 rounded-4 mb-4 p-2 bg-white">
+          <ul className="nav nav-pills flex-nowrap overflow-auto" style={{whiteSpace: "nowrap"}}>
+            <li className="nav-item">
+              <button className={`nav-link rounded-pill fw-semibold px-4 py-2 ${activeTab === "PROCESSING" ? "active bg-danger text-white" : "text-dark"}`} onClick={() => setActiveTab("PROCESSING")}>Đơn mới đặt / Đang xử lý</button>
+            </li>
+            <li className="nav-item">
+              <button className={`nav-link rounded-pill fw-semibold px-4 py-2 ${activeTab === "COMPLETED" ? "active bg-danger text-white" : "text-dark"}`} onClick={() => setActiveTab("COMPLETED")}>Đã giao</button>
+            </li>
+            <li className="nav-item">
+              <button className={`nav-link rounded-pill fw-semibold px-4 py-2 ${activeTab === "CANCELLED" ? "active bg-danger text-white" : "text-dark"}`} onClick={() => setActiveTab("CANCELLED")}>Đã hủy</button>
+            </li>
+            <li className="nav-item">
+              <button className={`nav-link rounded-pill fw-semibold px-4 py-2 ${activeTab === "ALL" ? "active bg-danger text-white" : "text-dark"}`} onClick={() => setActiveTab("ALL")}>Tất cả</button>
+            </li>
+          </ul>
+        </div>
 
         {loading ? (
           <div className="text-center my-5">
@@ -99,55 +163,92 @@ function OrderHistoryPage() {
               <span className="visually-hidden">Đang tải...</span>
             </div>
           </div>
-        ) : orders.length === 0 ? (
+        ) : filteredOrders.length === 0 ? (
           <div className="alert alert-info text-center py-4 rounded-4">
-            Bạn chưa thực hiện bất kỳ đơn hàng nào!
+            Không có đơn hàng nào trong mục này!
           </div>
         ) : (
-          <div className="row g-3">
-            {orders.map((o) => (
+          <div className="row g-4">
+            {filteredOrders.map((o) => (
               <div className="col-12" key={o.id}>
-                <div className="card shadow-sm border-0 rounded-4 p-4">
-                  <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="card shadow-sm border-0 rounded-4 overflow-hidden">
+                  <div className="card-header bg-white p-4 border-bottom-0 d-flex justify-content-between align-items-center">
                     <div>
-                      <span className="text-muted">Mã đơn hàng:</span> <span className="fw-bold">#{o.id}</span>
+                      <span className="text-muted">Mã đơn hàng:</span> <span className="fw-bold fs-5 text-dark">#{o.id}</span>
                     </div>
                     <div>
-                      <span className="text-muted">Ngày đặt:</span> <span className="fw-semibold">{new Date(o.orderedDate || Date.now()).toLocaleDateString("vi-VN")}</span>
+                      <span className="text-muted">Ngày đặt:</span> <span className="fw-semibold text-dark">{new Date(o.orderedDate || Date.now()).toLocaleDateString("vi-VN")}</span>
                     </div>
                   </div>
-                  <hr />
-                  {!["CANCELLED","REJECTED"].includes(o.status) ? <div className="d-flex justify-content-between mb-4">
-                    {statusSteps.map((step, index) => {
-                      const current = Math.max(0, statusSteps.indexOf(o.status));
-                      return <div className={`text-center flex-fill ${index <= current ? "text-danger fw-bold" : "text-muted"}`} key={step}><div className={`rounded-circle mx-auto mb-1 ${index <= current ? "bg-danger" : "bg-secondary"}`} style={{width:14,height:14}}></div><small>{statusLabels[index]}</small></div>;
-                    })}
-                  </div> : <div className={`alert ${o.status === "CANCELLED" ? "alert-secondary" : "alert-danger"} mb-4`}><i className="fa-solid fa-circle-xmark me-2"></i><b>{statusText[o.status]}</b>{o.cancellationReason && <span> · {o.cancellationReason}</span>}</div>}
-                  <div className="row">
-                    <div className="col-md-8">
-                      <p className="mb-1"><span className="fw-semibold">Khách hàng:</span> {o.user ? o.user.userName : 'Không rõ'}</p>
-                      <p className="mb-0">
-                        <span className="fw-semibold">Sản phẩm: </span>
-                        {o.items && o.items.length > 0 ? (
-                          o.items.map(item => `${item.productNameSnapshot || item.product?.productName || 'Sản phẩm'}${item.size ? ` - Size ${item.size}` : ""} (x${item.quantity})`).join(", ")
-                        ) : 'Không có sản phẩm'}
-                      </p>
+                  <div className="card-body px-4 pb-2 pt-0">
+                    {!["CANCELLED","REJECTED","PENDING_USER_DECISION"].includes(o.status) ? <div className="d-flex justify-content-between mb-4 mt-3 position-relative">
+                      <div className="position-absolute top-50 start-0 end-0 translate-middle-y" style={{height: "2px", backgroundColor: "#e9ecef", zIndex: 0}}></div>
+                      {statusSteps.map((step, index) => {
+                        const current = Math.max(0, statusSteps.indexOf(o.status));
+                        return <div className={`text-center position-relative bg-white px-2 ${index <= current ? "text-danger fw-bold" : "text-muted"}`} style={{zIndex: 1}} key={step}><div className={`rounded-circle mx-auto mb-1 border border-2 border-white shadow-sm ${index <= current ? "bg-danger" : "bg-light"}`} style={{width:16,height:16}}></div><small>{statusLabels[index]}</small></div>;
+                      })}
+                    </div> : 
+                    o.status === "PENDING_USER_DECISION" ? (
+                      <div className="alert alert-warning mb-4 mt-2 border-warning shadow-sm">
+                        <div className="d-flex align-items-center mb-2">
+                          <i className="fa-solid fa-circle-exclamation fs-4 me-2 text-warning"></i>
+                          <b className="fs-5">Cửa hàng báo lỗi món</b>
+                        </div>
+                        <p className="mb-3">
+                          Rất tiếc, cửa hàng đã báo lỗi đối với một món trong đơn hàng của bạn. Lý do: <strong>{o.problemReason || "Hết hàng hoặc lỗi sản phẩm"}</strong>.
+                          <br />Bạn có muốn tiếp tục mua các món còn lại trong đơn, hay hủy toàn bộ đơn hàng này?
+                        </p>
+                        <div className="d-flex gap-2">
+                          <button className="btn btn-warning fw-bold text-dark px-4 rounded-pill" onClick={() => handleResolveIssue(o.id, "CONTINUE")}>Đồng ý tiếp tục</button>
+                          <button className="btn btn-outline-danger fw-bold px-4 rounded-pill bg-white" onClick={() => handleResolveIssue(o.id, "CANCEL")}>Hủy toàn bộ đơn</button>
+                        </div>
+                      </div>
+                    ) :
+                    <div className={`alert ${o.status === "CANCELLED" ? "alert-secondary" : "alert-danger"} mb-4 mt-2`}><i className="fa-solid fa-circle-xmark me-2"></i><b>{statusText[o.status]}</b>{o.cancellationReason && <span> · {o.cancellationReason}</span>}</div>}
+                    <div className="row bg-light rounded-4 p-3 mx-0 mb-3">
+                      <div className="col-md-8 mb-3 mb-md-0 border-end">
+                        <p className="mb-3"><span className="fw-semibold text-muted">Khách hàng:</span> <span className="fw-bold">{o.user ? o.user.userName : 'Không rõ'}</span></p>
+                        <div>
+                          <span className="fw-semibold text-muted d-block mb-2">Sản phẩm:</span>
+                          {o.items && o.items.length > 0 ? (
+                            <div className="d-flex flex-column gap-3 mt-1">
+                              {o.items.map((item, index) => {
+                                const pid = item.sourceProductId || item.product?.id;
+                                const prodInfo = products.find(p => p.id === pid);
+                                const imgUrl = prodInfo?.imageUrl || "https://via.placeholder.com/60?text=SP";
+                                return (
+                                  <div className="d-flex align-items-center" key={`${pid}-${index}`}>
+                                    <div className="rounded border bg-white p-1 shadow-sm me-3" style={{width: '60px', height: '60px'}}>
+                                      <img src={imgUrl} alt="product" className="w-100 h-100 rounded object-fit-cover" />
+                                    </div>
+                                    <div className="d-flex flex-column justify-content-center">
+                                      <p className="mb-0 fw-bold text-dark lh-sm">{item.productNameSnapshot || item.product?.productName || 'Sản phẩm'}</p>
+                                      <small className="text-muted mt-1">{item.size ? `Size ${item.size}` : "Tiêu chuẩn"} · <span className="fw-semibold">x{item.quantity}</span></small>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : <span className="text-muted">Không có sản phẩm</span>}
+                        </div>
+                      </div>
+                      <div className="col-md-4 d-flex flex-column justify-content-center text-md-end ps-md-4 mt-3 mt-md-0">
+                        <p className="mb-2"><span className="fw-semibold text-muted me-2">Trạng thái:</span> <span className={`badge ${o.status === "COMPLETED" ? "bg-success" : o.status === "CANCELLED" ? "bg-secondary" : o.status === "REJECTED" ? "bg-danger" : "bg-warning text-dark"} px-3 py-2 fs-6 rounded-pill shadow-sm`}>{statusText[o.status] || o.status}</span></p>
+                        <h3 className="text-danger fw-bold mb-0 mt-3">{(o.total || 0).toLocaleString("vi-VN")} đ</h3>
+                      </div>
                     </div>
-                    <div className="col-md-4 text-md-end mt-3 mt-md-0">
-                      <p className="mb-1"><span className="fw-semibold">Trạng thái:</span> <span className={`badge ${o.status === "COMPLETED" ? "bg-success" : o.status === "CANCELLED" ? "bg-secondary" : o.status === "REJECTED" ? "bg-danger" : "bg-warning text-dark"} px-3 py-2 fs-6`}>{statusText[o.status] || o.status}</span></p>
-                      <h4 className="text-primary fw-bold mb-0 mt-2">Tổng: {(o.total || 0).toLocaleString("vi-VN")} VNĐ</h4>
-                      {o.status === "COMPLETED" && (
-                        <>
-                          <button className="btn btn-danger btn-sm mt-3 me-2" onClick={() => {
-                            setReviewOrder(o.id);
-                            // Choose the first product to review by default
-                            setReviewProductId(o.items?.[0]?.sourceProductId || o.items?.[0]?.product?.id);
-                          }}>Đánh giá</button>
-                          <button className="btn btn-outline-danger btn-sm mt-3" onClick={() => setComplaintOrder(o.id)}>Khiếu nại</button>
-                        </>
-                      )}
-                      {(["PENDING_CONFIRMATION","CONFIRMED"].includes(o.status)) && <button className="btn btn-outline-secondary btn-sm mt-3 ms-2" onClick={() => handleCancel(o.id)}>Hủy đơn</button>}
-                    </div>
+                  </div>
+                  <div className="card-footer bg-white p-4 border-top-0 d-flex justify-content-end gap-2">
+                    {o.status === "COMPLETED" && (
+                      <>
+                        <button className="btn btn-outline-secondary rounded-pill px-4" onClick={() => setComplaintOrder(o.id)}>Khiếu nại</button>
+                        <button className="btn btn-danger rounded-pill px-4 shadow-sm" onClick={() => {
+                          setReviewOrder(o.id);
+                          setReviewProductId(o.items?.[0]?.sourceProductId || o.items?.[0]?.product?.id);
+                        }}>Đánh giá</button>
+                      </>
+                    )}
+                    {(["PENDING_CONFIRMATION","CONFIRMED"].includes(o.status)) && <button className="btn btn-outline-danger rounded-pill px-4" onClick={() => handleCancel(o.id)}>Hủy đơn</button>}
                   </div>
                 </div>
               </div>

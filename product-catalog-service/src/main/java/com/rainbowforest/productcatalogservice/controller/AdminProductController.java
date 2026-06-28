@@ -28,7 +28,7 @@ public class AdminProductController {
 
     @GetMapping(value = "/products")
     public ResponseEntity<List<Product>> getAdminProducts() {
-        List<Product> products = productService.getAdminManagedProducts();
+        List<Product> products = productService.getAllProduct();
         return new ResponseEntity<>(
                 products,
                 headerGenerator.getHeadersForSuccessGetMethod(),

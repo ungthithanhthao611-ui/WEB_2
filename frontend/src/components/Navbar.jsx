@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { logout } from "../services/authService";
+import { logout, getUnreadNotificationCount } from "../services/authService";
 import "../pages/user/HomePage.css";
 import { getCart } from "../services/cartService";
 
@@ -8,7 +8,9 @@ function Navbar() {
   const navigate = useNavigate();
   const token = sessionStorage.getItem("token");
   const email = sessionStorage.getItem("email");
+  const userId = sessionStorage.getItem("userId");
   const [cartCount, setCartCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -21,15 +23,26 @@ function Navbar() {
 
   useEffect(() => {
     const refreshCart = () => getCart().then((res) => setCartCount((res.data || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0))).catch(() => setCartCount(0));
+    const refreshNotifications = () => {
+      if (userId) {
+        getUnreadNotificationCount(userId).then(res => setUnreadCount(res.data)).catch(() => setUnreadCount(0));
+      }
+    };
     const handleToast = (event) => {
       setToast(event.detail);
       window.setTimeout(() => setToast(null), 2600);
     };
     refreshCart();
+    refreshNotifications();
     window.addEventListener("cart-updated", refreshCart);
+    window.addEventListener("notifications-updated", refreshNotifications);
     window.addEventListener("app-toast", handleToast);
-    return () => { window.removeEventListener("cart-updated", refreshCart); window.removeEventListener("app-toast", handleToast); };
-  }, []);
+    return () => { 
+      window.removeEventListener("cart-updated", refreshCart); 
+      window.removeEventListener("notifications-updated", refreshNotifications);
+      window.removeEventListener("app-toast", handleToast); 
+    };
+  }, [userId]);
 
   const handleAccount = () => {
     if (token) navigate("/profile");
@@ -62,8 +75,20 @@ function Navbar() {
           </div>
 
           <div className="nav-right">
-            <ul className="nav-tools">
+            <ul className="nav-tools d-flex align-items-center">
               <li><Link to="/cart" className="btn-delivery position-relative">Giỏ hàng{cartCount > 0 && <span className="cart-count-badge">{cartCount}</span>}</Link></li>
+              {token && (
+                <li className="ms-3 me-2">
+                  <Link to="/notifications" className="text-dark position-relative" style={{textDecoration: "none"}}>
+                    <i className="fa-solid fa-bell fs-5"></i>
+                    {unreadCount > 0 && (
+                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{fontSize: "0.65rem", padding: "0.2em 0.5em"}}>
+                        {unreadCount}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              )}
               <li>
                 <button type="button" className="account-link" onClick={handleAccount}>
                   <i className="fa-solid fa-user"></i> {token ? email || "Tài khoản" : "Tài khoản"}

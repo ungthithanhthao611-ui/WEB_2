@@ -213,4 +213,28 @@ public class OrderController {
             .count();
         return ResponseEntity.ok(count);
     }
+
+    @DeleteMapping(value = "/order/admin/{orderId}/items/{itemId}")
+    public ResponseEntity<?> removeOrderItem(@PathVariable("orderId") Long orderId, @PathVariable("itemId") Long itemId, @RequestParam(name="reason", defaultValue="Lỗi sản phẩm") String reason) {
+        try {
+            Order updatedOrder = checkoutService.reportItemIssue(orderId, itemId, reason);
+            return ResponseEntity.ok(updatedOrder);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Error: " + e.getMessage(), "cause", String.valueOf(e.getCause())));
+        }
+    }
+
+    @PostMapping(value = "/order/user/{orderId}/resolve-issue")
+    public ResponseEntity<?> resolveItemIssue(@PathVariable("orderId") Long orderId, @RequestParam("userId") Long userId, @RequestParam("action") String action) {
+        try {
+            Order updatedOrder = checkoutService.resolveItemIssue(orderId, userId, action);
+            return ResponseEntity.ok(updatedOrder);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Error: " + e.getMessage()));
+        }
+    }
 }

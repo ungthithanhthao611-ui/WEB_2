@@ -74,7 +74,14 @@ public class CheckoutService {
         BigDecimal subtotal = items.stream().map(Item::getSubTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
         StoreLocation selectedStore = storeRepository.findByNameAndActiveTrue(request.store().trim())
                 .or(() -> storeRepository.findByNameIgnoreCaseAndActiveTrue(request.store().trim()))
-                .orElseThrow(() -> new IllegalArgumentException("Cửa hàng không còn nhận đơn, vui lòng chọn lại cửa hàng"));
+                .orElseGet(() -> {
+                    StoreLocation newStore = new StoreLocation();
+                    newStore.setName(request.store().trim());
+                    newStore.setDistrict(request.district() != null ? request.district() : "Unknown");
+                    newStore.setAddress(request.store().trim());
+                    newStore.setActive(true);
+                    return storeRepository.save(newStore);
+                });
         ShippingMethod shipping = shippingMethodRepository.findById(request.shippingMethod()).filter(ShippingMethod::isActive).orElseThrow(() -> new IllegalArgumentException("Hình thức giao hàng không hợp lệ"));
         BigDecimal verifiedShippingFee = shipping.getFee() == null ? BigDecimal.ZERO : shipping.getFee();
         Voucher voucher = validateVoucher(request.voucherCode(), request.userId(), subtotal);
@@ -263,5 +270,88 @@ public class CheckoutService {
                 log.warn("Không thể gửi email hóa đơn cho đơn {}: {}", order.getOrderCode(), exception.getMessage());
             }
         });
+    }
+
+    @Transactional
+    public Order reportItemIssue(Long orderId, Long itemId, String reason) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Không tìm thấy đơn hàng"));
+        
+        Item problemItem = order.getItems().stream().filter(i -> i.getId().equals(itemId)).findFirst().orElse(null);
+        if (problemItem == null) throw new IllegalArgumentException("Không tìm thấy sản phẩm trong đơn");
+        
+        order.setProblemItemId(itemId);
+        order.setProblemReason(reason);
+        order.setStatus("PENDING_USER_DECISION");
+        
+        OrderStatusHistory history = new OrderStatusHistory();
+        history.setOrder(order);
+        history.setStatus(order.getStatus());
+        history.setChangedBy("ADMIN");
+        history.setReason("Báo lỗi món: " + reason);
+        history.setChangedAt(LocalDateTime.now());
+        if (order.getStatusHistory() == null) order.setStatusHistory(new ArrayList<>());
+        order.getStatusHistory().add(history);
+        
+        Order saved = orderRepository.save(order);
+        
+        String email = null;
+        if (order.getUser() != null) {
+            try {
+                User remoteUser = userClient.getUserById(order.getUser().getId());
+                email = remoteUser != null && remoteUser.getUserDetails() != null ? remoteUser.getUserDetails().getEmail() : order.getUser().getUserName();
+            } catch (Exception e) {
+                email = order.getUser().getUserName();
+            }
+        }
+        
+        publish("ITEM_ISSUE_REPORTED", saved, email);
+        return saved;
+    }
+
+    @Transactional
+    public Order resolveItemIssue(Long orderId, Long userId, String action) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Không tìm thấy đơn hàng"));
+        if (order.getUser() == null || !Objects.equals(order.getUser().getId(), userId)) throw new IllegalArgumentException("Bạn không có quyền xử lý đơn này");
+        if (!"PENDING_USER_DECISION".equals(order.getStatus())) throw new IllegalArgumentException("Đơn không ở trạng thái chờ quyết định");
+        
+        if ("CANCEL".equalsIgnoreCase(action)) {
+            return changeStatus(orderId, "CANCELLED", "USER:" + userId, "Khách hàng không đồng ý bỏ món, hủy toàn bộ đơn");
+        } else if ("CONTINUE".equalsIgnoreCase(action)) {
+            Long problemItemId = order.getProblemItemId();
+            if (problemItemId != null) {
+                Item itemToRemove = null;
+                for (Item i : order.getItems()) {
+                    if (i.getId().equals(problemItemId)) {
+                        itemToRemove = i;
+                        break;
+                    }
+                }
+                if (itemToRemove != null) {
+                    order.getItems().remove(itemToRemove);
+                    if (itemToRemove.getOrders() != null) itemToRemove.getOrders().remove(order);
+                    
+                    BigDecimal newSubtotal = com.rainbowforest.orderservice.utilities.OrderUtilities.countTotalPrice(order.getItems());
+                    order.setSubtotal(newSubtotal);
+                    BigDecimal shipping = order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO;
+                    BigDecimal discount = order.getDiscount() != null ? order.getDiscount() : BigDecimal.ZERO;
+                    order.setTotal(newSubtotal.add(shipping).subtract(discount));
+                }
+            }
+            order.setProblemItemId(null);
+            order.setProblemReason(null);
+            order.setStatus("PENDING_CONFIRMATION");
+            
+            OrderStatusHistory history = new OrderStatusHistory();
+            history.setOrder(order);
+            history.setStatus(order.getStatus());
+            history.setChangedBy("USER:" + userId);
+            history.setReason("Khách hàng đồng ý bỏ món lỗi và tiếp tục mua");
+            history.setChangedAt(LocalDateTime.now());
+            order.getStatusHistory().add(history);
+            
+            return orderRepository.save(order);
+        } else {
+            throw new IllegalArgumentException("Hành động không hợp lệ");
+        }
     }
 }

@@ -49,3 +49,12 @@ export const cancelOrder = (orderId, reason) => axiosClient.put(`/api/shop/order
 
 export const checkActiveProduct = (productId) => axiosClient.get(`/api/shop/order/active-product-check/${productId}`);
 export const getPendingOrderCount = () => axiosClient.get("/api/shop/order/pending-count");
+export const removeOrderItemAdmin = async (orderId, itemId, reason) => {
+  return axiosClient.delete(`/api/shop/order/admin/${orderId}/items/${itemId}`, { params: { reason } });
+};
+
+export const resolveOrderIssue = async (orderId, userId, action) => {
+  return axiosClient.post(`/api/shop/order/user/${orderId}/resolve-issue`, null, {
+    params: { userId, action }
+  });
+};

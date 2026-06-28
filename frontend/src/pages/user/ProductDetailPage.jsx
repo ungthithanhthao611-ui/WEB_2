@@ -5,12 +5,14 @@ import { addToCart } from "../../services/cartService";
 import { getRecommendationsByProduct, saveRecommendation } from "../../services/recommendationService";
 import UserLayout from "../../layouts/UserLayout";
 import { notifyCartChanged, setCartItemMeta, showToast } from "../../services/shopConfigService";
+import { getWishlist, addToWishlist, removeFromWishlist } from "../../services/authService";
 import "./ProductDetailPage.css";
 
 function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
+  const [wishlist, setWishlist] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const [sizes, setSizes] = useState([]);
@@ -23,7 +25,7 @@ function ProductDetailPage() {
     try {
       const res = await getProductById(id);
       setProduct(res.data);
-      const variants = (await getProductVariants(res.data.id)).data.filter(item => item.active);
+      const variants = (await getProductVariants(res.data.id)).data || [];
       setSizes(variants);
       setSelectedSize(variants.find(item => Number(item.stock) > 0) || variants[0] || null);
 
@@ -63,8 +65,42 @@ function ProductDetailPage() {
     }
   };
 
+  const loadWishlist = async () => {
+    const userId = sessionStorage.getItem("userId");
+    if (userId) {
+      try {
+        const res = await getWishlist(userId);
+        setWishlist(new Set(res.data));
+      } catch (error) {
+        console.error("Lỗi lấy wishlist:", error);
+      }
+    }
+  };
+
+  const handleToggleWishlist = async (productId) => {
+    const userId = sessionStorage.getItem("userId");
+    if (!userId) {
+      showToast("Vui lòng đăng nhập để lưu sản phẩm yêu thích!", "error");
+      return;
+    }
+    try {
+      if (wishlist.has(productId)) {
+        await removeFromWishlist(userId, productId);
+        setWishlist(prev => { const next = new Set(prev); next.delete(productId); return next; });
+        showToast("Đã bỏ yêu thích");
+      } else {
+        await addToWishlist(userId, productId);
+        setWishlist(prev => { const next = new Set(prev); next.add(productId); return next; });
+        showToast("Đã thêm vào yêu thích");
+      }
+    } catch (error) {
+      showToast("Lỗi cập nhật yêu thích", "error");
+    }
+  };
+
   useEffect(() => {
     loadProduct();
+    loadWishlist();
   }, [id]);
 
   const hasDiscount = product && product.originalPrice && product.originalPrice > product.price;
@@ -91,10 +127,17 @@ function ProductDetailPage() {
           <div className="product-detail-shell">
             <div className="row g-0">
               <div className="col-lg-6">
-                <div className="product-gallery">
+                <div className="product-gallery position-relative">
                   {hasDiscount && (
                     <span className="product-discount">-{discountPercentage}%</span>
                   )}
+                  <button
+                    className="btn btn-light position-absolute top-0 end-0 m-3 rounded-circle shadow-sm"
+                    style={{ width: "42px", height: "42px", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    onClick={(e) => { e.preventDefault(); handleToggleWishlist(product.id); }}
+                  >
+                    <i className={`fa-heart fs-5 ${wishlist.has(product.id) ? "fa-solid text-danger" : "fa-regular text-secondary"}`}></i>
+                  </button>
                   <img
                     src={product.imageUrl || "https://images.unsplash.com/photo-1585366119957-e5733f399e7c?w=500"}
                     alt={product.name}

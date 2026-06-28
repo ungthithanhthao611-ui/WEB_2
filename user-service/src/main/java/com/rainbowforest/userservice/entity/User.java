@@ -34,6 +34,11 @@ public class User {
     @JoinColumn (name = "role_id")
     private UserRole role;
 
+    @ElementCollection
+    @CollectionTable(name = "user_wishlist", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "product_id")
+    private java.util.Set<Long> wishlist = new java.util.HashSet<>();
+
 	public Long getId() {
 		return id;
 	}
@@ -97,4 +102,12 @@ public class User {
 	public void setResetOtpExpiry(java.time.LocalDateTime resetOtpExpiry) {
 		this.resetOtpExpiry = resetOtpExpiry;
 	}
+
+    public java.util.Set<Long> getWishlist() {
+        return wishlist;
+    }
+
+    public void setWishlist(java.util.Set<Long> wishlist) {
+        this.wishlist = wishlist;
+    }
 }

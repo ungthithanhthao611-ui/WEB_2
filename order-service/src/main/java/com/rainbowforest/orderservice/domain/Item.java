@@ -14,7 +14,6 @@ public class Item {
 	
     @Id
     @GeneratedValue (strategy = GenerationType.IDENTITY)
-    @JsonIgnore
     private Long id;
 
     @Column (name = "quantity")

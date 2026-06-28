@@ -74,8 +74,20 @@ function CartPage() {
 
   return (
     <UserLayout>
-      <div className="container mt-4">
-        <h3 className="fw-extrabold text-danger mb-4"><i className="fa-solid fa-basket-shopping me-2"></i>GIỎ HÀNG CỦA BẠN</h3>
+      <div className="container mt-5 mb-5 pb-4">
+        <div className="d-flex align-items-center mb-4">
+          <div className="rounded-circle d-flex align-items-center justify-content-center me-3 shadow-sm" style={{ width: "55px", height: "55px", backgroundColor: "#f9e5e6", color: "#b22830", fontSize: "1.6rem" }}>
+            <i className="fa-solid fa-basket-shopping"></i>
+          </div>
+          <div>
+            <h3 className="fw-extrabold mb-1" style={{ color: "#b22830", letterSpacing: "0.5px" }}>GIỎ HÀNG CỦA BẠN</h3>
+            <div className="d-flex align-items-center" style={{ width: "100%", maxWidth: "300px" }}>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "#dcdcdc" }}></div>
+              <i className="fa-solid fa-seedling mx-2" style={{ color: "#7a462c", fontSize: "0.8rem" }}></i>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "#dcdcdc" }}></div>
+            </div>
+          </div>
+        </div>
 
         {loading ? (
           <div className="text-center my-5">
@@ -84,16 +96,66 @@ function CartPage() {
             </div>
           </div>
         ) : !cart || !Array.isArray(cart) || cart.length === 0 ? (
-          <div className="card shadow-sm border-0 rounded-5 p-5 text-center bg-white">
-            <div className="mb-4">
-              <i className="fa-solid fa-face-sad-tear text-warning" style={{ fontSize: "5rem" }}></i>
+          <>
+            <div className="card shadow-sm border-0 rounded-5 p-5 text-center bg-white mx-auto" style={{ minHeight: "350px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+              <div className="mb-4 position-relative">
+                <i className="fa-solid fa-cart-shopping" style={{ fontSize: "6rem", color: "#8b5a2b", opacity: 0.85 }}></i>
+              </div>
+              <h4 className="fw-bold text-dark mb-2" style={{ letterSpacing: "-0.5px" }}>Giỏ hàng của bạn đang trống!</h4>
+              <p className="text-muted fs-6 mb-4">Hãy khám phá thực đơn và thêm món bạn yêu thích.</p>
+              <button className="btn px-4 py-2.5 rounded-pill text-white fw-bold d-flex align-items-center gap-2" style={{ backgroundColor: "#b22830", fontSize: "0.95rem", transition: "0.3s" }} onClick={() => navigate("/products")} onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#901d24"} onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#b22830"}>
+                <i className="fa-solid fa-mug-hot"></i> KHÁM PHÁ THỰC ĐƠN
+              </button>
             </div>
-            <h4 className="fw-bold">Giỏ hàng của bạn đang trống!</h4>
-            <p className="text-muted">Hãy chọn thức uống Highlands yêu thích của bạn.</p>
-            <button className="btn btn-toy-primary px-5 py-3 mt-3 rounded-pill text-white fw-bold" onClick={() => navigate("/products")}>
-              QUAY LẠI MUA SẮM NGAY
-            </button>
-          </div>
+
+            {/* Features Section */}
+            <div className="row g-2 mt-5 mb-3">
+              <div className="col-md-3 col-6 mb-3">
+                <div className="d-flex align-items-center justify-content-center justify-content-md-start text-start border-md-end px-2 h-100">
+                  <div className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0 shadow-sm" style={{ width: "45px", height: "45px", backgroundColor: "#fcf0f0", color: "#5d3215", fontSize: "1.1rem" }}>
+                    <i className="fa-solid fa-seedling"></i>
+                  </div>
+                  <div>
+                    <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "0.9rem" }}>Cà phê chất lượng</h6>
+                    <small className="text-muted" style={{ fontSize: "0.75rem" }}>100% nguyên liệu chọn lọc</small>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-3 col-6 mb-3">
+                <div className="d-flex align-items-center justify-content-center justify-content-md-start text-start border-md-end px-2 h-100">
+                  <div className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0 shadow-sm" style={{ width: "45px", height: "45px", backgroundColor: "#fcf0f0", color: "#b22830", fontSize: "1.1rem" }}>
+                    <i className="fa-solid fa-leaf"></i>
+                  </div>
+                  <div>
+                    <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "0.9rem" }}>Tươi mới mỗi ngày</h6>
+                    <small className="text-muted" style={{ fontSize: "0.75rem" }}>Pha chế và phục vụ tận tâm</small>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-3 col-6 mb-3">
+                <div className="d-flex align-items-center justify-content-center justify-content-md-start text-start border-md-end px-2 h-100">
+                  <div className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0 shadow-sm" style={{ width: "45px", height: "45px", backgroundColor: "#fcf0f0", color: "#b22830", fontSize: "1.1rem" }}>
+                    <i className="fa-solid fa-truck-fast"></i>
+                  </div>
+                  <div>
+                    <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "0.9rem" }}>Giao hàng nhanh chóng</h6>
+                    <small className="text-muted" style={{ fontSize: "0.75rem" }}>Đơn hàng đến tay trong thời gian ngắn</small>
+                  </div>
+                </div>
+              </div>
+              <div className="col-md-3 col-6 mb-3">
+                <div className="d-flex align-items-center justify-content-center justify-content-md-start text-start px-2 h-100">
+                  <div className="rounded-circle d-flex align-items-center justify-content-center me-3 flex-shrink-0 shadow-sm" style={{ width: "45px", height: "45px", backgroundColor: "#fcf0f0", color: "#b22830", fontSize: "1.1rem" }}>
+                    <i className="fa-solid fa-shield-halved"></i>
+                  </div>
+                  <div>
+                    <h6 className="fw-bold mb-0 text-dark" style={{ fontSize: "0.9rem" }}>Thanh toán an toàn</h6>
+                    <small className="text-muted" style={{ fontSize: "0.75rem" }}>Bảo mật tuyệt đối thông tin</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="row g-4">
             <div className="col-lg-8">

@@ -47,9 +47,10 @@ public class NotificationEventConsumer {
     }
 
     private String subject(Map<String, Object> event) {
-        return "ORDER_CREATED".equals(value(event, "eventType"))
-                ? "Đặt hàng thành công - " + value(event, "orderCode")
-                : "Cập nhật đơn hàng - " + value(event, "orderCode");
+        String type = value(event, "eventType");
+        if ("ORDER_CREATED".equals(type)) return "Đặt hàng thành công - " + value(event, "orderCode");
+        if ("ITEM_ISSUE_REPORTED".equals(type)) return "Sự cố đơn hàng: Báo thiếu món - " + value(event, "orderCode");
+        return "Cập nhật đơn hàng - " + value(event, "orderCode");
     }
 
     private String buildHtmlBody(Map<String, Object> event) {
@@ -63,14 +64,26 @@ public class NotificationEventConsumer {
 
         StringBuilder html = new StringBuilder();
         html.append("<div style='font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;'>");
-        html.append("<div style='background-color: #e30613; padding: 20px; text-align: center; color: white;'>");
-        html.append("<h2 style='margin: 0;'>Xác Nhận Đơn Hàng</h2>");
-        html.append("<p style='margin: 5px 0 0 0;'>Cảm ơn bạn đã mua sắm tại Highlands Coffee</p>");
-        html.append("</div>");
         
-        html.append("<div style='padding: 20px;'>");
-        html.append("<p>Xin chào <strong>").append(recipient).append("</strong>,</p>");
-        html.append("<p>Đơn hàng <strong>").append(orderCode).append("</strong> của bạn hiện đang ở trạng thái: <span style='color: #e30613; font-weight: bold;'>").append(status).append("</span>.</p>");
+        String eventType = value(event, "eventType");
+        if ("ITEM_ISSUE_REPORTED".equals(eventType)) {
+            html.append("<div style='background-color: #ff9800; padding: 20px; text-align: center; color: white;'>");
+            html.append("<h2 style='margin: 0;'>Sự Cố Đơn Hàng</h2>");
+            html.append("<p style='margin: 5px 0 0 0;'>Cửa hàng đã báo lỗi một món trong đơn hàng của bạn</p>");
+            html.append("</div>");
+            html.append("<div style='padding: 20px;'>");
+            html.append("<p>Xin chào <strong>").append(recipient).append("</strong>,</p>");
+            html.append("<p>Rất tiếc, cửa hàng đã báo lỗi một số món trong đơn hàng <strong>").append(orderCode).append("</strong> của bạn.</p>");
+            html.append("<p style='background: #fff3cd; padding: 10px; border-left: 4px solid #ffc107;'><strong>Vui lòng đăng nhập vào website và vào mục Lịch sử mua hàng để xác nhận tiếp tục mua các món còn lại hoặc hủy toàn bộ đơn.</strong></p>");
+        } else {
+            html.append("<div style='background-color: #e30613; padding: 20px; text-align: center; color: white;'>");
+            html.append("<h2 style='margin: 0;'>Xác Nhận Đơn Hàng</h2>");
+            html.append("<p style='margin: 5px 0 0 0;'>Cảm ơn bạn đã mua sắm tại Highlands Coffee</p>");
+            html.append("</div>");
+            html.append("<div style='padding: 20px;'>");
+            html.append("<p>Xin chào <strong>").append(recipient).append("</strong>,</p>");
+            html.append("<p>Đơn hàng <strong>").append(orderCode).append("</strong> của bạn hiện đang ở trạng thái: <span style='color: #e30613; font-weight: bold;'>").append(status).append("</span>.</p>");
+        }
         
         html.append("<h3 style='border-bottom: 2px solid #eee; padding-bottom: 10px;'>Chi tiết đơn hàng</h3>");
         html.append("<table style='width: 100%; border-collapse: collapse; margin-bottom: 20px;'>");
