@@ -53,8 +53,14 @@ public class ApiExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> unexpected(Exception exception) {
-        exception.printStackTrace();
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("code", "INTERNAL_ERROR", "message", "Không thể tạo đơn hàng", "detail", exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage()));
+    public ResponseEntity<Map<String, String>> handleException(Exception e) {
+        try {
+            java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.FileWriter("d:/Web2_/e-commerce-microservices/debug-500.txt", true));
+            e.printStackTrace(pw);
+            pw.close();
+        } catch(Exception ignored) {}
+        Map<String, String> response = new HashMap<>();
+        response.put("error", e.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 }

@@ -10,7 +10,7 @@ function NewsDetailPage() {
       <Link to="/news" className="text-decoration-none text-danger fw-semibold"><i className="fa-solid fa-arrow-left me-2"></i>Quay lại tin tức</Link>
       <header className="text-center my-4"><small className="text-danger fw-bold">{new Date(article.createdAt).toLocaleDateString("vi-VN")}</small><h1 className="display-5 fw-bold mt-2">{article.title}</h1><p className="lead text-muted">{article.summary}</p></header>
       {article.imageUrl && <img src={article.imageUrl} alt={article.title} className="w-100 rounded-4 shadow-sm mb-4" style={{maxHeight:520,objectFit:"cover"}}/>}
-      <div className="fs-5 lh-lg" style={{whiteSpace:"pre-wrap"}}>{article.content}</div>
+      <div className="fs-5 lh-lg news-content-html" dangerouslySetInnerHTML={{ __html: article.content }}></div>
     </article>}
   </div></UserLayout>;
 }

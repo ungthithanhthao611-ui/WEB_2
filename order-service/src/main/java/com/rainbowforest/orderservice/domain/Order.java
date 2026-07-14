@@ -63,6 +63,12 @@ public class Order {
     @OrderBy("changedAt ASC")
     private List<OrderStatusHistory> statusHistory;
     
+    @Column(name = "staff_id")
+    private Long staffId;
+
+    @Column(name = "shipper_id")
+    private Long shipperId;
+    
 	public Order() {
 		
 	}
@@ -156,4 +162,9 @@ public class Order {
     public void setProblemItemId(Long problemItemId) { this.problemItemId = problemItemId; }
     public String getProblemReason() { return problemReason; }
     public void setProblemReason(String problemReason) { this.problemReason = problemReason; }
+
+    public Long getStaffId() { return staffId; }
+    public void setStaffId(Long staffId) { this.staffId = staffId; }
+    public Long getShipperId() { return shipperId; }
+    public void setShipperId(Long shipperId) { this.shipperId = shipperId; }
 }

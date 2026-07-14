@@ -6,9 +6,9 @@ import cloudinary.uploader
 # CẤU HÌNH CLOUDINARY (Lấy từ ảnh màn hình)
 # ==========================================
 cloudinary.config( 
-  cloud_name = "dfs9o3bny", 
-  api_key = "513954498387371", 
-  api_secret = "Brss7LepXirwlYHuPWMfnsLguko",
+  cloud_name = "dpetnxe5v", 
+  api_key = "397927887693992", 
+  api_secret = "wi3fjpXosKeEajzcZj1asCk6atI",
   secure = True
 )
 
@@ -22,7 +22,7 @@ TARGET_DIRECTORIES = [
 ]
 
 # Thư mục gốc trên Cloudinary (nếu muốn gom tất cả vào 1 nơi)
-CLOUDINARY_BASE_FOLDER = "my_ecommerce_project"
+CLOUDINARY_BASE_FOLDER = "web2"
 
 # Các định dạng file ảnh hợp lệ
 VALID_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'}

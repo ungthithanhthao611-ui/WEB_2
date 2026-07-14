@@ -5,9 +5,9 @@ import AdminLayout from "../../layouts/AdminLayout";
 import { showToast } from "../../services/shopConfigService";
 import * as XLSX from "xlsx";
 
-const STATUS_FLOW = ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "SHIPPING", "COMPLETED"];
+const STATUS_FLOW = ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "SHIPPING", "COMPLETED"];
 const normalizeStatus = (status) => ({ PENDING:"PENDING_CONFIRMATION", PROCESSING:"PREPARING", DELIVERING:"SHIPPING" }[status] || status);
-const STATUS_TEXT = { PENDING_CONFIRMATION:"Chờ xác nhận", CONFIRMED:"Đã xác nhận", PREPARING:"Đang chuẩn bị", SHIPPING:"Đang giao", COMPLETED:"Đã giao", CANCELLED:"Đã hủy", REJECTED:"Bị từ chối" };
+const STATUS_TEXT = { PENDING_CONFIRMATION:"Chờ xác nhận", CONFIRMED:"Đã xác nhận", PREPARING:"Đang chuẩn bị", READY_FOR_PICKUP:"Chờ lấy hàng", SHIPPING:"Đang giao", COMPLETED:"Đã giao", CANCELLED:"Đã hủy", REJECTED:"Bị từ chối" };
 
 function AdminOrderPage() {
   const [orders, setOrders] = useState([]);
@@ -18,7 +18,9 @@ function AdminOrderPage() {
   const loadOrders = async () => {
     try {
       const res = await getAllOrders();
-      setOrders(res.data);
+      // Sắp xếp đơn hàng mới nhất lên đầu
+      const sortedOrders = res.data.sort((a, b) => b.id - a.id);
+      setOrders(sortedOrders);
     } catch (error) {
       console.error("Lỗi lấy danh sách đơn hàng:", error);
     } finally {
@@ -101,7 +103,7 @@ function AdminOrderPage() {
   };
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 8; // Giảm xuống 8 để hiển thị phân trang rõ hơn
 
   const totalPages = Math.ceil(orders.length / itemsPerPage);
   const currentOrders = orders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -113,7 +115,7 @@ function AdminOrderPage() {
   };
 
   const renderPagination = () => {
-    if (totalPages <= 1) return null;
+    if (orders.length === 0) return null;
     return (
       <div className="d-flex justify-content-between align-items-center p-3 border-top bg-white">
         <span className="text-muted">
@@ -172,8 +174,13 @@ function AdminOrderPage() {
                 </thead>
                 <tbody>
                   {currentOrders.map((o) => (
-                    <tr key={o.id}>
-                      <td className="px-4 py-3 fw-bold">#{o.id}</td>
+                    <tr key={o.id} className={normalizeStatus(o.status) === "PENDING_CONFIRMATION" ? "bg-light" : ""}>
+                      <td className="px-4 py-3 fw-bold">
+                        #{o.id}
+                        {normalizeStatus(o.status) === "PENDING_CONFIRMATION" && (
+                          <span className="badge bg-danger ms-2 position-relative" style={{fontSize: "0.65rem", top: "-2px"}}>MỚI</span>
+                        )}
+                      </td>
                       <td className="py-3">{o.user ? o.user.userName : 'Không rõ'}</td>
                       <td className="py-3">
                         {o.items && o.items.length > 0 ? (

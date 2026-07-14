@@ -58,3 +58,6 @@ export const resolveOrderIssue = async (orderId, userId, action) => {
     params: { userId, action }
   });
 };
+
+export const assignOrderToStaff = (orderId, staffId) => axiosClient.put(`/api/shop/order/${orderId}/staff/assign`, { staffId });
+export const assignOrderToShipper = (orderId, shipperId) => axiosClient.put(`/api/shop/order/${orderId}/shipper/assign`, { shipperId });

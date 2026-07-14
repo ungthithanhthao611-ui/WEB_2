@@ -6,8 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import reactor.core.publisher.Mono;
 
 /**
- * RateLimiterConfig đã bị tắt trong môi trường dev vì không sử dụng Redis.
- * Nếu muốn bật lại Rate Limiting, hãy khởi động Redis và cấu hình lại application.yml.
+ * Cấu hình Rate Limiting (Tiêu chí 11).
+ * Sử dụng Redis để quản lý Token Bucket.
  */
 @Configuration
 public class RateLimiterConfig {

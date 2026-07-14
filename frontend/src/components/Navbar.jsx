@@ -11,7 +11,6 @@ function Navbar() {
   const userId = sessionStorage.getItem("userId");
   const [cartCount, setCartCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,19 +27,13 @@ function Navbar() {
         getUnreadNotificationCount(userId).then(res => setUnreadCount(res.data)).catch(() => setUnreadCount(0));
       }
     };
-    const handleToast = (event) => {
-      setToast(event.detail);
-      window.setTimeout(() => setToast(null), 2600);
-    };
     refreshCart();
     refreshNotifications();
     window.addEventListener("cart-updated", refreshCart);
     window.addEventListener("notifications-updated", refreshNotifications);
-    window.addEventListener("app-toast", handleToast);
     return () => { 
       window.removeEventListener("cart-updated", refreshCart); 
       window.removeEventListener("notifications-updated", refreshNotifications);
-      window.removeEventListener("app-toast", handleToast); 
     };
   }, [userId]);
 
@@ -104,7 +97,7 @@ function Navbar() {
           </div>
         </div>
       </header>
-      {toast && <div className={`app-toast ${toast.type === "error" ? "error" : ""}`}><i className={`fa-solid ${toast.type === "error" ? "fa-circle-xmark" : "fa-circle-check"}`}></i>{toast.message}</div>}
+
     </div>
   );
 }

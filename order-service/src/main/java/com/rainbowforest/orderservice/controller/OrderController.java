@@ -17,11 +17,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.math.BigDecimal;
-
 import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
@@ -53,6 +53,7 @@ public class OrderController {
     }
     
     @PostMapping(value = "/order/{userId}")
+    @io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker(name = "userClient", fallbackMethod = "fallbackSaveOrder")
     public ResponseEntity<Order> saveOrder(
     		@PathVariable("userId") Long userId,
     		@RequestHeader(value = "Cart-Id") String cartId,
@@ -97,6 +98,13 @@ public class OrderController {
 				HttpStatus.BAD_REQUEST);
     }
     
+    public ResponseEntity<Order> fallbackSaveOrder(Long userId, String cartId, HttpServletRequest request, Throwable t) {
+        System.err.println("Circuit Breaker Fallback triggered for userId " + userId + " due to: " + t.getMessage());
+        return new ResponseEntity<Order>(
+                headerGenerator.getHeadersForError(),
+                HttpStatus.SERVICE_UNAVAILABLE);
+    }
+    
     @GetMapping(value = "/order")
     public ResponseEntity<List<Order>> getAllOrders() {
         List<Order> orders = orderService.getAllOrders();
@@ -113,6 +121,18 @@ public class OrderController {
     public ResponseEntity<Order> updateOrderStatus(@PathVariable("orderId") Long orderId, @RequestBody Map<String, String> statusMap) {
         Order order = checkoutService.changeStatus(orderId, statusMap.get("status"), statusMap.get("changedBy"), statusMap.get("reason"));
         return new ResponseEntity<Order>(order, headerGenerator.getHeadersForSuccessGetMethod(), HttpStatus.OK);
+    }
+
+    @PutMapping(value = "/order/{orderId}/staff/assign")
+    public ResponseEntity<Order> assignOrderToStaff(@PathVariable("orderId") Long orderId, @RequestBody Map<String, Object> body) {
+        Long staffId = body.get("staffId") != null ? Long.valueOf(body.get("staffId").toString()) : null;
+        return ResponseEntity.ok(checkoutService.assignToStaff(orderId, staffId));
+    }
+
+    @PutMapping(value = "/order/{orderId}/shipper/assign")
+    public ResponseEntity<Order> assignOrderToShipper(@PathVariable("orderId") Long orderId, @RequestBody Map<String, Object> body) {
+        Long shipperId = body.get("shipperId") != null ? Long.valueOf(body.get("shipperId").toString()) : null;
+        return ResponseEntity.ok(checkoutService.assignToShipper(orderId, shipperId));
     }
 
     @PutMapping(value = "/order/{orderId}/cancel")
@@ -146,12 +166,8 @@ public class OrderController {
             
             if (o.getItems() != null) {
                 for (Item item : o.getItems()) {
-                    // Try to guess category from product or use a generic "Other"
-                    // Since Item doesn't store category, we will mock category logic or just group by productName for now if category is missing.
-                    // Wait, Product is attached! Item has getProduct()
-                    String category = (item.getProduct() != null && item.getProduct().getCategory() != null) 
-                                        ? item.getProduct().getCategory() 
-                                        : "Chưa phân loại";
+                    // Since Product does not store category in this DB, fallback to "Chưa phân loại"
+                    String category = "Chưa phân loại";
                     categorySales.merge(category, (long) item.getQuantity(), Long::sum);
                 }
             }

@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 
-function ProtectedRoute({ children, adminOnly = false }) {
+function ProtectedRoute({ children, adminOnly = false, requiredRole = null }) {
   const token = sessionStorage.getItem("token");
   const role = sessionStorage.getItem("role");
 
@@ -10,6 +10,11 @@ function ProtectedRoute({ children, adminOnly = false }) {
 
   if (adminOnly && role !== "ROLE_ADMIN" && role !== "ROLE_STAFF") {
     alert("Bạn không có quyền truy cập trang quản trị!");
+    return <Navigate to="/" replace />;
+  }
+
+  if (requiredRole && role !== requiredRole) {
+    alert("Bạn không có quyền truy cập trang này!");
     return <Navigate to="/" replace />;
   }
 

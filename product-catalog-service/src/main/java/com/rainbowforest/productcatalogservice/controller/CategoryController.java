@@ -24,7 +24,7 @@ public class CategoryController {
     @GetMapping("/categories")
     public ResponseEntity<?> getAllCategories() {
         try {
-            List<Category> categories = categoryService.getAllCategories();
+            List<Category> categories = categoryService.getAdminManagedCategories();
             return new ResponseEntity<>(
                     categories,
                     headerGenerator.getHeadersForSuccessGetMethod(),

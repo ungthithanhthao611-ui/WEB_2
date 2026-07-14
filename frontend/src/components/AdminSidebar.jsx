@@ -50,8 +50,8 @@ function AdminSidebar() {
 
   return (
     <div
-      className="text-white p-3 d-flex flex-column h-100"
-      style={{ minWidth: "260px", minHeight: "100vh", backgroundColor: "#3d2314" }}
+      className="text-white p-3 d-flex flex-column h-100 sidebar-scroll"
+      style={{ minWidth: "260px", height: "100vh", overflowY: "auto", backgroundColor: "#3d2314" }}
     >
       <div className="mb-4 text-center">
         <img

@@ -123,3 +123,100 @@ npm install
 npm run dev
 ```
 Cuối cùng, mở trình duyệt web và truy cập vào đường dẫn được hiển thị trên console (ví dụ: `http://localhost:5173` hoặc `http://localhost:5174`) để trải nghiệm ứng dụng với giao diện Highlands Coffee.
+
+---
+
+## 🗄️ Cấu Trúc Các Bảng Cơ Sở Dữ Liệu
+
+Hệ thống bao gồm các bảng (tables) phân tán theo các dịch vụ:
+
+- **User Service:** `users`, `user_role`, `users_details`, `notifications`
+- **Product Catalog Service:** `products`, `categories`, `product_variants`
+- **Order Service:** `orders`, `items`, `store_locations`, `shipping_methods`, `order_status_history`, `banners`, `voucher_redemptions`, `vouchers`, `support_tickets`
+- **Product Recommendation Service:** `recommendation`
+
+*(Lưu ý: Do sử dụng kiến trúc Microservices nên mỗi service có thể sử dụng database hoặc schema riêng rẽ)*
+
+---
+
+## 📅 Tiến Độ Thực Hiện (08/06/2026 - 29/06/2026)
+
+Dưới đây là tiến độ phát triển các chức năng phân chia theo từng tuần dựa trên lịch sử commit:
+
+### Tuần 1 (08/06 - 14/06)
+- **Khởi tạo hệ thống:** Thiết lập kiến trúc Microservices cơ bản.
+- **Phát triển Frontend:** Cập nhật giao diện người dùng theo chủ đề Highlands Coffee.
+- **Xây dựng tính năng web:** Triển khai và cập nhật các chức năng cơ bản trên web.
+- **Tài liệu:** Cập nhật file README với hướng dẫn và thông tin dự án.
+
+### Tuần 2 (15/06 - 21/06)
+- Xây dựng và thiết kế ngầm định các tính năng nâng cao, nghiên cứu tích hợp bảo mật và hệ thống gửi mail.
+
+### Tuần 3 (22/06 - 29/06)
+- **Bảo mật:** Triển khai bảo mật bằng JWT (JSON Web Token) và Rate Limiting.
+- **Hệ thống Email:** Cập nhật tính năng gửi Email hóa đơn trực tiếp cho khách hàng.
+- **Fix Bug & Tối ưu:** Khắc phục các lỗi kết nối dữ liệu và lỗi hiển thị giao diện Frontend.
+- **Hoàn thiện:** Tổng kết và đáp ứng đủ 16 yêu cầu của đồ án, cập nhật source code hoàn chỉnh.
+
+---
+
+## Giữa kỳ:
+
+### 1. Sơ lượt tổng quan về dự án (đối tượng, chức năng, các bảng, mối liên hệ)
+- **Đối tượng hướng đến:** 
+  - *Khách hàng:* Những người yêu thích các sản phẩm đồ uống/bánh ngọt của Highlands Coffee mong muốn đặt hàng trực tuyến nhanh chóng.
+  - *Quản trị viên (Admin):* Nhân viên cửa hàng hoặc quản lý cần hệ thống theo dõi đơn hàng và cập nhật thực đơn tự động.
+- **Chức năng chính:**
+  - *Khách hàng:* Đăng ký/Đăng nhập, duyệt menu đồ uống, quản lý giỏ hàng trực tuyến, đặt hàng, nhận email hóa đơn điện tử tự động.
+  - *Quản trị viên:* Quản lý danh mục, quản lý sản phẩm (thêm, sửa, xóa, cập nhật tình trạng bán), quản lý danh sách đơn hàng và tài khoản người dùng.
+- **Các bảng dữ liệu và mối liên hệ:**
+  - *Đặc thù Microservices:* Dữ liệu không tập trung ở 1 database duy nhất mà chia nhỏ cho từng Service quản lý. Các bảng liên kết ngầm với nhau qua các khóa định danh (như `user_id`, `product_id`).
+  - *Nhóm bảng Người dùng (`users`, `user_role`, `users_details`):* Quản lý thông tin cá nhân và quyền truy cập (Admin/User).
+  - *Nhóm bảng Sản phẩm (`categories`, `products`, `product_variants`):* Mối quan hệ 1-N (Một danh mục có nhiều sản phẩm). Chứa thông tin về đồ uống, giá cả, size.
+  - *Nhóm bảng Đơn hàng (`orders`, `items`, `order_status_history`):* Chứa thông tin đơn đặt hàng. Quan hệ 1-N (Một đơn hàng có nhiều món `items`).
+  - *Nhóm bảng Phụ trợ (`notifications`, `recommendation`):* Lưu trữ dữ liệu thông báo và hệ thống gợi ý món.
+
+### 2. Quy trình hoặc mô hình dự án
+- **Mô hình kiến trúc:** Ứng dụng mô hình **Microservices** kết hợp **Event-Driven Architecture** (Kiến trúc hướng sự kiện).
+- **Quy trình hoạt động (User Flow) nổi bật:**
+  1. Người dùng truy cập hệ thống qua cổng duy nhất là **API Gateway**.
+  2. Xác thực và phân quyền được xử lý tại **User Service** (sử dụng Token JWT).
+  3. Thao tác thêm vào giỏ hàng được xử lý tốc độ cao nhờ lưu trữ tạm thời trên bộ nhớ đệm **Redis**.
+  4. Khi khách hàng bấm chốt đơn, **Order Service** sẽ ghi nhận dữ liệu vào CSDL PostgreSQL.
+  5. Thay vì gửi email trực tiếp gây chậm hệ thống, Order Service phát ra một sự kiện (event) đưa vào **Apache Kafka**.
+  6. **Notification Service** chạy ngầm, tự động hứng sự kiện từ Kafka và thực hiện gửi Email hóa đơn cho khách.
+
+### 3. Tiến độ thực tế hiện tại
+- **Tiến độ (Đạt 100% so với kế hoạch đề ra):**
+  - Đã xây dựng hoàn chỉnh và kết nối thành công các Microservices (Eureka, Gateway, User, Catalog, Order, Notification...).
+  - Đã hoàn thiện giao diện Frontend bằng React chuẩn phong cách Highlands Coffee.
+  - Tích hợp thành công giỏ hàng Redis và luồng gửi Email tự động bằng Kafka.
+  - Hệ thống đã có bảo mật JWT và chống spam API (Rate Limiting).
+  - Đã sửa các lỗi hiển thị và kết nối cơ sở dữ liệu.
+- **Định hướng phát triển thêm (Nếu có thời gian):**
+- Tích hợp thanh toán trực tuyến qua cổng VNPay hoặc Momo.
+  - Triển khai (Deploy) dự án thực tế lên môi trường Cloud (AWS hoặc Docker Swarm).
+
+---
+
+## 🚀 Các Tính Năng Nâng Cấp Mới (30/06/2026)
+
+Để tối ưu hóa luồng vận hành của Bếp, Shipper và nâng cao trải nghiệm của khách hàng, hệ thống đã được nâng cấp thêm các tính năng quan trọng sau:
+
+### 1. Cập nhật trạng thái đơn hàng thời gian thực (Real-time Updates)
+- **Công nghệ áp dụng:** Server-Sent Events (SSE).
+- **Cơ chế hoạt động:** 
+  - Backend của `order-service` triển khai `SseController` quản lý danh sách kết nối (`SseEmitter`) của người dùng theo `userId`.
+  - API Gateway định tuyến trực tiếp các request stream `/api/shop/order-stream/user/{userId}` về `order-service` không đi qua filter JWT (giúp kết nối bằng đối tượng EventSource mặc định của trình duyệt).
+  - Khi trạng thái đơn hàng thay đổi trên Bếp (`StaffDashboard`) hoặc Shipper (`ShipperDashboard`), hệ thống sẽ kích hoạt phát tín hiệu cập nhật.
+  - Phía khách hàng (`OrderHistoryPage`) lắng nghe luồng sự kiện và tự động thay đổi thanh tiến trình giao hàng (và hiện Toast thông báo) ngay lập tức mà **không cần tải lại trang (F5)**.
+
+### 2. Thời gian giao hàng dự kiến (Estimated Time of Arrival - ETA)
+- **Cơ chế hoạt động:** Tính toán và hiển thị thời gian giao hàng dự kiến trực quan bên dưới thanh trạng thái đơn hàng dựa trên hình thức giao hàng mà khách lựa chọn (Hỏa tốc: 30 - 45 phút, Tiêu chuẩn: 60 - 90 phút).
+
+### 3. Phân hệ Bếp & Shipper chuyên nghiệp (Dashboard Header & Logout)
+- **Cải tiến:** Thiết kế component `DashboardHeader` màu đỏ Highlands Coffee đồng bộ, tích hợp thông tin tài khoản đăng nhập và nút đăng xuất (`logout`) an toàn giúp bảo mật thông tin nội bộ.
+- **Quản lý lịch sử giao hàng:** Bổ sung bộ chọn tab cho Shipper để quản lý riêng biệt các đơn hàng đang giao và các đơn đã giao thành công trước đó để đối soát tiền COD.
+
+### 4. In phiếu chế biến tại Bếp (Kitchen Order Ticket Printing)
+- **Cơ chế hoạt động:** Bổ sung tính năng in nhanh phiếu chế biến cho Bếp bằng cách chèn một iframe ẩn chứa mẫu hóa đơn nhiệt (80mm) được thiết kế chuyên biệt (phông chữ Courier, viền nét đứt mang phong cách hóa đơn chuẩn, nổi bật phần ghi chú của khách), sau đó gọi lệnh `window.print()` của trình duyệt để in phiếu dán lên cốc nhanh chóng.

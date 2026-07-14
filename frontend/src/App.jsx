@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ToastContainer } from 'react-toastify';
-import "react-toastify/dist/ReactToastify.css";
+import { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // User Pages
@@ -38,10 +37,30 @@ import AdminSupportPage from "./pages/admin/AdminSupportPage";
 // Security
 import ProtectedRoute from "./components/ProtectedRoute";
 
+// Staff & Shipper Pages
+import StaffDashboard from "./pages/staff/StaffDashboard";
+import ShipperDashboard from "./pages/shipper/ShipperDashboard";
+
 function App() {
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const handleToast = (event) => {
+      setToast(event.detail);
+      window.setTimeout(() => setToast(null), 2600);
+    };
+    window.addEventListener("app-toast", handleToast);
+    return () => window.removeEventListener("app-toast", handleToast);
+  }, []);
+
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} />
+      {toast && (
+        <div className={`app-toast ${toast.type === "error" ? "error" : ""}`} style={{ zIndex: 9999 }}>
+          <i className={`fa-solid ${toast.type === "error" ? "fa-circle-xmark" : "fa-circle-check"}`}></i>
+          {toast.message}
+        </div>
+      )}
       <BrowserRouter>
         <Routes>
         {/* Public Routes */}
@@ -164,6 +183,26 @@ function App() {
           element={
             <ProtectedRoute adminOnly={true}>
               <AdminUserPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Staff Routes */}
+        <Route
+          path="/staff"
+          element={
+            <ProtectedRoute requiredRole="ROLE_STAFF">
+              <StaffDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Shipper Routes */}
+        <Route
+          path="/shipper"
+          element={
+            <ProtectedRoute requiredRole="ROLE_SHIPPER">
+              <ShipperDashboard />
             </ProtectedRoute>
           }
         />

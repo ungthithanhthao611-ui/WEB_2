@@ -133,6 +133,7 @@ public class Product {
     public boolean isFeatured(){return Boolean.TRUE.equals(featured);} public void setFeatured(Boolean v){featured=v;}
     public boolean isNewProduct(){return Boolean.TRUE.equals(newProduct);} public void setNewProduct(Boolean v){newProduct=v;}
     public boolean isBestSeller(){return Boolean.TRUE.equals(bestSeller);} public void setBestSeller(Boolean v){bestSeller=v;}
+    @JsonIgnore
     public List<ProductVariant> getVariants(){return variants;}
     public void setVariants(List<ProductVariant> values){variants=values;if(values!=null)values.forEach(v->v.setProduct(this));}
 

@@ -13,4 +13,14 @@ public class CatalogExceptionHandler {
                 "code", "INVENTORY_ERROR",
                 "message", exception.getMessage()));
     }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleGenericException(Exception exception) {
+        try {
+            java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.FileWriter("d:/Web2_/e-commerce-microservices/debug-catalog-500.txt", true));
+            exception.printStackTrace(pw);
+            pw.close();
+        } catch(Exception ignored) {}
+        return ResponseEntity.status(500).body(Map.of("error", exception.getMessage() != null ? exception.getMessage() : exception.getClass().getName()));
+    }
 }

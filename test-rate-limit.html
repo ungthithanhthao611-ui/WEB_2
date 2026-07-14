@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Rate Limiting (DDoS Simulation)</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; display: flex; flex-direction: column; align-items: center; padding: 50px; }
+        h1 { color: #333; }
+        .btn { background-color: #e74c3c; color: white; border: none; padding: 15px 30px; font-size: 20px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn:hover { background-color: #c0392b; transform: translateY(-2px); }
+        .btn:active { transform: translateY(0); }
+        #log-container { margin-top: 30px; width: 80%; max-width: 800px; background: #1e1e1e; color: #00ff00; padding: 20px; border-radius: 8px; height: 400px; overflow-y: auto; font-family: monospace; font-size: 16px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .success { color: #2ecc71; }
+        .error { color: #e74c3c; font-weight: bold; }
+        .info { color: #3498db; }
+    </style>
+</head>
+<body>
+
+    <h1>🚀 Công Cụ Kiểm Tra Rate Limiting (Chống Spam) 🚀</h1>
+    <p>Bấm nút bên dưới để đóng vai Hacker, gửi cùng lúc <b>30 request</b> vào hệ thống API Gateway.</p>
+    
+    <button class="btn" onclick="startAttack()">🔥 BẮN 30 REQUEST NGAY! 🔥</button>
+
+    <div id="log-container">
+        <div class="info">Sẵn sàng chờ lệnh...</div>
+    </div>
+
+    <script>
+        const logContainer = document.getElementById('log-container');
+
+        function appendLog(message, className) {
+            const div = document.createElement('div');
+            div.className = className;
+            div.textContent = message;
+            logContainer.appendChild(div);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        async function startAttack() {
+            logContainer.innerHTML = '<div class="info">Đang khởi chạy luồng tấn công...</div>';
+            
+            const totalRequests = 30;
+            let successCount = 0;
+            let blockedCount = 0;
+
+            const promises = [];
+
+            for (let i = 1; i <= totalRequests; i++) {
+                // Chạy đồng thời không chờ đợi
+                promises.push(
+                    fetch('http://localhost:8900/api/catalog/products')
+                        .then(res => {
+                            if (res.status === 429) {
+                                appendLog(`[Request ${i}] 🚫 BỊ CHẶN BỞI GATEWAY (Lỗi 429 - Too Many Requests)`, 'error');
+                                blockedCount++;
+                            } else if (res.status === 200) {
+                                appendLog(`[Request ${i}] ✅ THÀNH CÔNG (Mã 200)`, 'success');
+                                successCount++;
+                            } else {
+                                appendLog(`[Request ${i}] ⚠️ Lỗi khác: ${res.status}`, 'info');
+                            }
+                        })
+                        .catch(err => {
+                            appendLog(`[Request ${i}] ❌ Mất kết nối tới Server!`, 'error');
+                        })
+                );
+            }
+
+            await Promise.all(promises);
+            appendLog(`\n🎉 KẾT QUẢ TỔNG KẾT:`, 'info');
+            appendLog(`- Số request lọt qua: ${successCount}`, 'success');
+            appendLog(`- Số request bị chặn (Chống sập server): ${blockedCount}`, 'error');
+        }
+    </script>
+</body>
+</html>

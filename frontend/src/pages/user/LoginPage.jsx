@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { toast } from "react-toastify";
+import { showToast } from "../../services/shopConfigService";
 import { login } from "../../services/authService";
 
 function LoginPage() {
@@ -28,15 +28,34 @@ function LoginPage() {
       const res = await login(form);
       const { token, role, userId, username } = res.data;
 
+      // Chuẩn hóa role: đảm bảo có tiền tố ROLE_ và in hoa
+      let normalizedRole = role ? (role.toUpperCase().startsWith("ROLE_") ? role.toUpperCase() : `ROLE_${role.toUpperCase()}`) : "ROLE_USER";
+
+      // Fallback cho trường hợp database chưa set đúng role (trả về ROLE_USER mặc định)
+      const loginName = (username || form.username).toLowerCase();
+      if (normalizedRole === "ROLE_USER") {
+        if (loginName.includes("shipper")) {
+          normalizedRole = "ROLE_SHIPPER";
+        } else if (loginName.includes("staff") || loginName.includes("nhanvien")) {
+          normalizedRole = "ROLE_STAFF";
+        } else if (loginName.includes("admin") || loginName.includes("quantri")) {
+          normalizedRole = "ROLE_ADMIN";
+        }
+      }
+
       sessionStorage.setItem("token", token);
-      sessionStorage.setItem("role", role);
+      sessionStorage.setItem("role", normalizedRole);
       sessionStorage.setItem("userId", userId);
       sessionStorage.setItem("email", username || form.username);
 
-      toast.success("Đăng nhập thành công! Đang chuyển hướng...");
+      showToast("Đăng nhập thành công! Đang chuyển hướng...");
       setTimeout(() => {
-        if (role === "ROLE_ADMIN" || role === "ROLE_STAFF") {
+        if (normalizedRole === "ROLE_ADMIN") {
           window.location.href = "/admin";
+        } else if (normalizedRole === "ROLE_STAFF") {
+          window.location.href = "/staff";
+        } else if (normalizedRole === "ROLE_SHIPPER") {
+          window.location.href = "/shipper";
         } else {
           window.location.href = "/";
         }

@@ -21,6 +21,9 @@ import java.util.*;
 @Service
 public class CheckoutService {
     private static final Logger log = LoggerFactory.getLogger(CheckoutService.class);
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.rainbowforest.orderservice.controller.SseController sseController;
     private final OrderRepository orderRepository;
     private final UserClient userClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -123,6 +126,9 @@ public class CheckoutService {
         productClient.reserve(inventory);
         try {
             saved = orderRepository.save(order);
+            if (sseController != null) {
+                sseController.broadcastOrderUpdate(saved);
+            }
         } catch (RuntimeException exception) {
             try {
                 productClient.release(inventory);
@@ -148,7 +154,7 @@ public class CheckoutService {
 
     @Transactional
     public Order changeStatus(Long orderId, String status, String changedBy, String reason) {
-        Set<String> allowed = Set.of("PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "SHIPPING", "COMPLETED", "CANCELLED", "REJECTED");
+        Set<String> allowed = Set.of("PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "SHIPPING", "DELIVERING", "COMPLETED", "CANCELLED", "REJECTED");
         if (!allowed.contains(status)) throw new IllegalArgumentException("Trạng thái đơn hàng không hợp lệ");
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Không tìm thấy đơn hàng"));
         String previousStatus = order.getStatus();
@@ -186,6 +192,9 @@ public class CheckoutService {
         }
         
         publish("ORDER_STATUS_CHANGED", saved, email);
+        if (sseController != null) {
+            sseController.broadcastOrderUpdate(saved);
+        }
         return saved;
     }
 
@@ -195,6 +204,26 @@ public class CheckoutService {
         if (order.getUser() == null || !Objects.equals(order.getUser().getId(), userId)) throw new IllegalArgumentException("Bạn không có quyền hủy đơn này");
         if (!Set.of("PENDING_CONFIRMATION", "CONFIRMED").contains(order.getStatus())) throw new IllegalArgumentException("Đơn đã được chuẩn bị nên không thể hủy");
         return changeStatus(orderId, "CANCELLED", "USER:" + userId, reason == null || reason.isBlank() ? "Khách hàng hủy đơn" : reason);
+    }
+
+    @Transactional
+    public Order assignToStaff(Long orderId, Long staffId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Không tìm thấy đơn hàng"));
+        if (!"CONFIRMED".equals(order.getStatus()) && !"PENDING_CONFIRMATION".equals(order.getStatus())) {
+            throw new IllegalArgumentException("Đơn hàng không ở trạng thái hợp lệ để nhân viên nhận");
+        }
+        order.setStaffId(staffId);
+        return changeStatus(orderId, "PREPARING", "STAFF:" + staffId, "Nhân viên nhận đóng gói");
+    }
+
+    @Transactional
+    public Order assignToShipper(Long orderId, Long shipperId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Không tìm thấy đơn hàng"));
+        if (!"READY_FOR_PICKUP".equals(order.getStatus())) {
+            throw new IllegalArgumentException("Đơn hàng chưa sẵn sàng để giao");
+        }
+        order.setShipperId(shipperId);
+        return changeStatus(orderId, "DELIVERING", "SHIPPER:" + shipperId, "Shipper nhận đi giao");
     }
 
     private Item toItem(CheckoutItemRequest source) {
@@ -305,6 +334,9 @@ public class CheckoutService {
         }
         
         publish("ITEM_ISSUE_REPORTED", saved, email);
+        if (sseController != null) {
+            sseController.broadcastOrderUpdate(saved);
+        }
         return saved;
     }
 
@@ -349,7 +381,11 @@ public class CheckoutService {
             history.setChangedAt(LocalDateTime.now());
             order.getStatusHistory().add(history);
             
-            return orderRepository.save(order);
+            Order saved = orderRepository.save(order);
+            if (sseController != null) {
+                sseController.broadcastOrderUpdate(saved);
+            }
+            return saved;
         } else {
             throw new IllegalArgumentException("Hành động không hợp lệ");
         }

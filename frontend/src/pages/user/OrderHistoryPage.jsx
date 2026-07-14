@@ -21,9 +21,10 @@ function OrderHistoryPage() {
   const [reviewImageBase64, setReviewImageBase64] = useState("");
   const [submittingReview, setSubmittingReview] = useState(false);
 
-  const statusSteps = ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "SHIPPING", "COMPLETED"];
-  const statusLabels = ["Chờ xác nhận", "Đã xác nhận", "Đang chuẩn bị", "Đang giao", "Đã giao"];
-  const statusText = { PENDING_CONFIRMATION:"Chờ xác nhận", CONFIRMED:"Đã xác nhận", PREPARING:"Đang chuẩn bị", SHIPPING:"Đang giao", COMPLETED:"Đã giao", CANCELLED:"Đã hủy", REJECTED:"Bị từ chối", PENDING_USER_DECISION:"Chờ quyết định" };
+  const statusSteps = ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "DELIVERING", "COMPLETED"];
+  const statusLabels = ["Chờ xác nhận", "Xác nhận", "Đóng gói", "Chờ lấy", "Đang giao", "Đã giao"];
+  const statusIcons = ["fa-file-invoice", "fa-check-double", "fa-kitchen-set", "fa-box", "fa-motorcycle", "fa-house-circle-check"];
+  const statusText = { PENDING_CONFIRMATION:"Chờ xác nhận", CONFIRMED:"Đã xác nhận", PREPARING:"Đang chuẩn bị", READY_FOR_PICKUP:"Chờ lấy hàng", DELIVERING:"Đang giao", SHIPPING:"Đang giao", COMPLETED:"Đã giao", CANCELLED:"Đã hủy", REJECTED:"Bị từ chối", PENDING_USER_DECISION:"Chờ quyết định" };
 
   const submitComplaint = (event) => {
     event.preventDefault();
@@ -118,11 +119,43 @@ function OrderHistoryPage() {
   useEffect(() => {
     loadOrders();
     loadProducts();
+
+    const userId = sessionStorage.getItem("userId");
+    if (!userId) return;
+
+    const eventSource = new EventSource(`http://localhost:8900/api/shop/order-stream/user/${userId}`);
+
+    eventSource.addEventListener("ORDER_UPDATE", (event) => {
+      try {
+        const updatedOrder = JSON.parse(event.data);
+        if (updatedOrder && updatedOrder.id) {
+          setOrders((currentOrders) => {
+            const exists = currentOrders.some(o => o.id === updatedOrder.id);
+            if (exists) {
+              return currentOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o);
+            } else {
+              return [updatedOrder, ...currentOrders].sort((a, b) => b.id - a.id);
+            }
+          });
+          showToast(`Đơn hàng #${updatedOrder.id} vừa được cập nhật trạng thái!`);
+        }
+      } catch (e) {
+        console.error("Lỗi parse dữ liệu SSE:", e);
+      }
+    });
+
+    eventSource.onerror = (err) => {
+      console.error("Lỗi kết nối Real-time stream:", err);
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
   const getFilteredOrders = () => {
     if (activeTab === "ALL") return orders;
-    if (activeTab === "PROCESSING") return orders.filter(o => ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "SHIPPING", "PENDING_USER_DECISION"].includes(o.status));
+    if (activeTab === "PROCESSING") return orders.filter(o => ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "DELIVERING", "SHIPPING", "PENDING_USER_DECISION"].includes(o.status));
     if (activeTab === "COMPLETED") return orders.filter(o => o.status === "COMPLETED");
     if (activeTab === "CANCELLED") return orders.filter(o => ["CANCELLED", "REJECTED"].includes(o.status));
     return orders;
@@ -181,11 +214,21 @@ function OrderHistoryPage() {
                     </div>
                   </div>
                   <div className="card-body px-4 pb-2 pt-0">
-                    {!["CANCELLED","REJECTED","PENDING_USER_DECISION"].includes(o.status) ? <div className="d-flex justify-content-between mb-4 mt-3 position-relative">
-                      <div className="position-absolute top-50 start-0 end-0 translate-middle-y" style={{height: "2px", backgroundColor: "#e9ecef", zIndex: 0}}></div>
+                    {!["CANCELLED","REJECTED","PENDING_USER_DECISION"].includes(o.status) ? <div className="d-flex justify-content-between mb-5 mt-4 position-relative px-1 px-md-4">
+                      <div className="position-absolute top-50 start-0 end-0 translate-middle-y d-none d-sm-block" style={{height: "3px", backgroundColor: "#e9ecef", zIndex: 0, left: "10%", right: "10%"}}></div>
                       {statusSteps.map((step, index) => {
                         const current = Math.max(0, statusSteps.indexOf(o.status));
-                        return <div className={`text-center position-relative bg-white px-2 ${index <= current ? "text-danger fw-bold" : "text-muted"}`} style={{zIndex: 1}} key={step}><div className={`rounded-circle mx-auto mb-1 border border-2 border-white shadow-sm ${index <= current ? "bg-danger" : "bg-light"}`} style={{width:16,height:16}}></div><small>{statusLabels[index]}</small></div>;
+                        const isActive = index <= current;
+                        const isCurrent = index === current;
+                        return (
+                          <div className={`text-center position-relative bg-white px-1 ${isActive ? "text-danger" : "text-muted"}`} style={{zIndex: 1, flex: 1}} key={step}>
+                            <div className={`rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center shadow-sm ${isActive ? "bg-danger text-white" : "bg-light text-secondary"}`} 
+                                 style={{width: isCurrent ? "45px" : "35px", height: isCurrent ? "45px" : "35px", transition: "all 0.3s", border: isActive ? "3px solid #fff" : "none"}}>
+                              <i className={`fa-solid ${statusIcons[index]} ${isCurrent ? 'fs-5' : 'fs-6'}`}></i>
+                            </div>
+                            <small className={`d-block ${isActive ? "fw-bold" : ""} ${isCurrent ? "text-danger" : ""}`} style={{fontSize: "0.75rem", lineHeight: "1.2"}}>{statusLabels[index]}</small>
+                          </div>
+                        );
                       })}
                     </div> : 
                     o.status === "PENDING_USER_DECISION" ? (
@@ -205,6 +248,16 @@ function OrderHistoryPage() {
                       </div>
                     ) :
                     <div className={`alert ${o.status === "CANCELLED" ? "alert-secondary" : "alert-danger"} mb-4 mt-2`}><i className="fa-solid fa-circle-xmark me-2"></i><b>{statusText[o.status]}</b>{o.cancellationReason && <span> · {o.cancellationReason}</span>}</div>}
+                    
+                    {!["COMPLETED", "CANCELLED", "REJECTED", "PENDING_USER_DECISION"].includes(o.status) && (
+                      <div className="alert alert-info border-0 rounded-3 py-2 px-3 mb-4 d-flex align-items-center gap-2 shadow-sm" style={{ backgroundColor: "#e8f4fd" }}>
+                        <i className="fa-solid fa-clock text-primary"></i>
+                        <span className="small text-dark">
+                          Thời gian nhận hàng dự kiến: <strong>{o.shippingMethod === "express" ? "30 - 45 phút" : "60 - 90 phút"}</strong> kể từ khi đặt hàng thành công.
+                        </span>
+                      </div>
+                    )}
+
                     <div className="row bg-light rounded-4 p-3 mx-0 mb-3">
                       <div className="col-md-8 mb-3 mb-md-0 border-end">
                         <p className="mb-3"><span className="fw-semibold text-muted">Khách hàng:</span> <span className="fw-bold">{o.user ? o.user.userName : 'Không rõ'}</span></p>

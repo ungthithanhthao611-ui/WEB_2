@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: api-gateway
+  data:
+    redis:
+      host: localhost
+      port: 6379
   cloud:
     gateway:
       globalcors:
@@ -43,6 +47,11 @@ spring:
             - Path=/api/catalog/**
           filters:
             - StripPrefix=2
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                key-resolver: "#{@ipKeyResolver}"
 
         # 3. Các API thống kê báo cáo đặt hàng (Chỉ ADMIN truy cập)
         - id: order-service-admin
@@ -62,9 +71,14 @@ spring:
             - Path=/api/shop/orders/checkout, /api/shop/order/**
           filters:
             - StripPrefix=2
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+                key-resolver: "#{@ipKeyResolver}"
             - name: JwtAuthenticationFilter
               args:
-                requiredRoles: USER, ADMIN
+                requiredRoles: USER, ADMIN, STAFF, SHIPPER
 
         # 5. Các API giỏ hàng và dữ liệu khác (Public hoặc phân quyền tùy ý)
         - id: order-service-public
