@@ -61,3 +61,5 @@ export const resolveOrderIssue = async (orderId, userId, action) => {
 
 export const assignOrderToStaff = (orderId, staffId) => axiosClient.put(`/api/shop/order/${orderId}/staff/assign`, { staffId });
 export const assignOrderToShipper = (orderId, shipperId) => axiosClient.put(`/api/shop/order/${orderId}/shipper/assign`, { shipperId });
+
+export const createVnpayPayment = (orderId, bankCode = "") => axiosClient.post("/api/payments/vnpay/create", { orderId, bankCode });

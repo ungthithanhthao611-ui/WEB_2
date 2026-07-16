@@ -111,6 +111,15 @@ public class OrderController {
         return new ResponseEntity<List<Order>>(orders, headerGenerator.getHeadersForSuccessGetMethod(), HttpStatus.OK);
     }
 
+    @GetMapping(value = "/order/{orderId}")
+    public ResponseEntity<Order> getOrderById(@PathVariable("orderId") Long orderId) {
+        Order order = orderService.getOrderById(orderId);
+        if (order != null) {
+            return new ResponseEntity<Order>(order, headerGenerator.getHeadersForSuccessGetMethod(), HttpStatus.OK);
+        }
+        return new ResponseEntity<Order>(headerGenerator.getHeadersForError(), HttpStatus.NOT_FOUND);
+    }
+
     @GetMapping(value = "/order/user/{userId}")
     public ResponseEntity<List<Order>> getOrdersByUserId(@PathVariable("userId") Long userId) {
         List<Order> orders = orderService.getOrdersByUserId(userId);
@@ -120,6 +129,12 @@ public class OrderController {
     @PutMapping(value = "/order/{orderId}/status")
     public ResponseEntity<Order> updateOrderStatus(@PathVariable("orderId") Long orderId, @RequestBody Map<String, String> statusMap) {
         Order order = checkoutService.changeStatus(orderId, statusMap.get("status"), statusMap.get("changedBy"), statusMap.get("reason"));
+        return new ResponseEntity<Order>(order, headerGenerator.getHeadersForSuccessGetMethod(), HttpStatus.OK);
+    }
+
+    @PutMapping(value = "/order/{orderId}/payment-status")
+    public ResponseEntity<Order> updateOrderPaymentStatus(@PathVariable("orderId") Long orderId, @RequestBody Map<String, String> statusMap) {
+        Order order = checkoutService.updatePaymentStatus(orderId, statusMap.get("paymentStatus"), statusMap.get("paymentMethod"), statusMap.get("status"));
         return new ResponseEntity<Order>(order, headerGenerator.getHeadersForSuccessGetMethod(), HttpStatus.OK);
     }
 

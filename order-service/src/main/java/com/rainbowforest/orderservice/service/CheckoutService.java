@@ -199,6 +199,29 @@ public class CheckoutService {
     }
 
     @Transactional
+    public Order updatePaymentStatus(Long orderId, String paymentStatus, String paymentMethod, String status) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Không tìm thấy đơn hàng"));
+        if (paymentStatus != null) order.setPaymentStatus(paymentStatus);
+        if (paymentMethod != null) order.setPaymentMethod(paymentMethod);
+        if (status != null) order.setStatus(status);
+        
+        OrderStatusHistory history = new OrderStatusHistory();
+        history.setOrder(order);
+        history.setStatus(order.getStatus());
+        history.setChangedBy("SYSTEM");
+        history.setReason("Cập nhật trạng thái thanh toán trực tuyến: " + paymentStatus);
+        history.setChangedAt(LocalDateTime.now());
+        if (order.getStatusHistory() == null) order.setStatusHistory(new ArrayList<>());
+        order.getStatusHistory().add(history);
+        
+        Order saved = orderRepository.save(order);
+        if (sseController != null) {
+            sseController.broadcastOrderUpdate(saved);
+        }
+        return saved;
+    }
+
+    @Transactional
     public Order cancelByCustomer(Long orderId, Long userId, String reason) {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new NoSuchElementException("Không tìm thấy đơn hàng"));
         if (order.getUser() == null || !Objects.equals(order.getUser().getId(), userId)) throw new IllegalArgumentException("Bạn không có quyền hủy đơn này");

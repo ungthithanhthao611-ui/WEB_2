@@ -7,8 +7,8 @@ import cloudinary.uploader
 # ==========================================
 cloudinary.config( 
   cloud_name = "dpetnxe5v", 
-  api_key = "397927887693992", 
-  api_secret = "wi3fjpXosKeEajzcZj1asCk6atI",
+  api_key = "216652881776236", 
+  api_secret = "9vo3Q34LBQtq7a90mrnwq68T8vc",
   secure = True
 )
 
@@ -47,7 +47,7 @@ def upload_images():
                     
                     # Tạo đường dẫn thư mục trên Cloudinary dựa trên cấu trúc thư mục local
                     # Ví dụ: frontend\src\assets\images -> my_ecommerce_project/frontend/src/assets/images
-                    relative_folder = root.replace(r"d:\Web2_\e-commerce-microservices\\", "").replace("\\", "/")
+                    relative_folder = os.path.relpath(root, r"d:\Web2_\e-commerce-microservices").replace("\\", "/")
                     cloudinary_folder = f"{CLOUDINARY_BASE_FOLDER}/{relative_folder}"
                     
                     print(f"⏳ Đang tải lên: {file_path} -> Thư mục: {cloudinary_folder}")
@@ -72,9 +72,5 @@ if __name__ == "__main__":
     print("Lệnh cài đặt: pip install cloudinary")
     print("=======================================\n")
     
-    confirm = input("Bạn có muốn bắt đầu tải lên không? (y/n): ")
-    if confirm.lower() == 'y':
-        upload_images()
-        print("\n🎉 Hoàn thành quá trình tải lên!")
-    else:
-        print("\nĐã hủy.")
+    upload_images()
+    print("\n🎉 Hoàn thành quá trình tải lên!")

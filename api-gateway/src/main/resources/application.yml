@@ -88,6 +88,23 @@ spring:
           filters:
             - StripPrefix=2
 
+        - id: payment-service-public
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/vnpay/return, /api/payments/vnpay/ipn
+          filters:
+            - StripPrefix=2
+
+        - id: payment-service-secured
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - StripPrefix=2
+            - name: JwtAuthenticationFilter
+              args:
+                requiredRoles: USER, ADMIN
+
         - id: product-recommendation-service
           uri: lb://product-recommendation-service
           predicates:

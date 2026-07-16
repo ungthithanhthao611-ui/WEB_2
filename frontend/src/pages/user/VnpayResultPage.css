@@ -1,0 +1,25 @@
+.vnpay-result-container {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vnpay-result-container .card {
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+}
+
+.vnpay-result-container .spinner-border {
+  border-width: 0.25em;
+}
+
+.vnpay-result-container i {
+  display: block;
+}
+
+.vnpay-result-container .bg-light {
+  background-color: #f8f9fa !important;
+  border: 1px solid #e9ecef;
+}

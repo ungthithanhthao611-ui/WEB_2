@@ -1,5 +1,6 @@
 package com.rainbowforest.notificationservice.consumer;
 
+import com.rainbowforest.notificationservice.feignclient.UserClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import jakarta.mail.internet.MimeMessage;
 import java.util.Map;
 import java.util.List;
+import java.util.HashMap;
 import java.text.NumberFormat;
 import java.util.Locale;
 
@@ -16,17 +18,36 @@ public class NotificationEventConsumer {
     private final JavaMailSender mailSender;
     private final String smtpHost;
     private final String from;
+    private final UserClient userClient;
 
     public NotificationEventConsumer(JavaMailSender mailSender,
             @Value("${spring.mail.host:}") String smtpHost,
-            @Value("${app.mail.from:no-reply@highlands.local}") String from) {
+            @Value("${app.mail.from:no-reply@highlands.local}") String from,
+            UserClient userClient) {
         this.mailSender = mailSender;
         this.smtpHost = smtpHost;
         this.from = from;
+        this.userClient = userClient;
     }
 
     @KafkaListener(topics = "order-events", groupId = "notification-group")
     public void consumeOrderEvent(Map<String, Object> event) {
+        // Save in-app notification first
+        Object userIdObj = event.get("userId");
+        if (userIdObj != null) {
+            try {
+                Long userId = Long.valueOf(userIdObj.toString());
+                Map<String, Object> notif = new HashMap<>();
+                notif.put("userId", userId);
+                notif.put("title", subject(event));
+                notif.put("message", getInAppNotificationMessage(event));
+                userClient.createNotification(notif);
+                System.out.println("In-app notification saved successfully for user: " + userId);
+            } catch (Exception e) {
+                System.err.println("Failed to save in-app notification: " + e.getMessage());
+            }
+        }
+
         String email = value(event, "email");
         if (smtpHost.isBlank() || email.isBlank() || !email.contains("@")) {
             System.out.printf("Notification queued: type=%s order=%s recipient=%s%n",
@@ -136,5 +157,32 @@ public class NotificationEventConsumer {
 
     private String value(Map<String, Object> event, String key) {
         return event.get(key) == null ? "" : String.valueOf(event.get(key));
+    }
+
+    private String getInAppNotificationMessage(Map<String, Object> event) {
+        String type = value(event, "eventType");
+        String orderCode = value(event, "orderCode");
+        String status = value(event, "status");
+        if ("ORDER_CREATED".equals(type)) {
+            return "Đơn hàng " + orderCode + " của bạn đã được đặt thành công và đang chờ xác nhận.";
+        }
+        if ("ITEM_ISSUE_REPORTED".equals(type)) {
+            return "Đơn hàng " + orderCode + " đang gặp sự cố do cửa hàng báo thiếu món. Vui lòng vào lịch sử đơn hàng để đưa ra quyết định.";
+        }
+        if ("ORDER_STATUS_CHANGED".equals(type)) {
+            String statusText = switch (status) {
+                case "CONFIRMED" -> "đã được xác nhận";
+                case "PREPARING" -> "đang được chuẩn bị";
+                case "READY_FOR_PICKUP" -> "đã chuẩn bị xong và chờ shipper lấy hàng";
+                case "SHIPPING" -> "đang giao";
+                case "DELIVERING" -> "đang được giao tới bạn";
+                case "COMPLETED" -> "đã hoàn thành thành công";
+                case "CANCELLED" -> "đã bị hủy";
+                case "REJECTED" -> "đã bị từ chối";
+                default -> "đã được cập nhật trạng thái mới: " + status;
+            };
+            return "Đơn hàng " + orderCode + " của bạn " + statusText + ".";
+        }
+        return "Đơn hàng " + orderCode + " có cập nhật mới.";
     }
 }

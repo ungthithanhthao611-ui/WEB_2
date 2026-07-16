@@ -9,6 +9,7 @@ const ShipperDashboard = () => {
   const currentUserId = sessionStorage.getItem("userId");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeTab, setActiveTab] = useState("ACTIVE"); // "ACTIVE" or "HISTORY"
+  const [confirmDeliveryId, setConfirmDeliveryId] = useState(null);
 
   const loadOrders = async () => {
     try {
@@ -29,6 +30,72 @@ const ShipperDashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (selectedOrder) {
+      const timer = setTimeout(() => {
+        const container = document.getElementById("shipper-map");
+        if (container && window.L) {
+          const coordinates = {
+            "Quận 1": [10.7760, 106.7009],
+            "Quận 3": [10.7792, 106.6800],
+            "Quận 4": [10.7580, 106.7067],
+            "Quận 5": [10.7540, 106.6634],
+            "Quận 7": [10.7324, 106.7265],
+            "Quận 10": [10.7719, 106.6679],
+            "Bình Thạnh": [10.8106, 106.7091],
+            "Phú Nhuận": [10.7992, 106.6803],
+            "Tân Bình": [10.7930, 106.6556],
+            "Thủ Đức": [10.8519, 106.7719]
+          };
+
+          const district = selectedOrder.district || "Quận 1";
+          const customerCoords = coordinates[district] || [10.7760, 106.7009];
+          const storeCoords = [customerCoords[0] - 0.005, customerCoords[1] - 0.006];
+
+          // Initialize Leaflet Map
+          const lMap = window.L.map("shipper-map").setView(storeCoords, 14);
+          
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+          }).addTo(lMap);
+
+          // Store Marker
+          window.L.marker(storeCoords, {
+            icon: window.L.divIcon({
+              className: 'custom-div-icon',
+              html: "<div style='background-color:#c82333; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'><i class='fa-solid fa-store'></i></div>",
+              iconSize: [30, 30],
+              iconAnchor: [15, 15]
+            })
+          }).addTo(lMap).bindPopup("Cửa hàng chuẩn bị đơn: " + (selectedOrder.store || "Highlands Coffee"));
+
+          // Customer Marker
+          window.L.marker(customerCoords, {
+            icon: window.L.divIcon({
+              className: 'custom-div-icon',
+              html: "<div style='background-color:#28a745; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'><i class='fa-solid fa-house-user'></i></div>",
+              iconSize: [30, 30],
+              iconAnchor: [15, 15]
+            })
+          }).addTo(lMap).bindPopup("Khách hàng: " + (selectedOrder.recipientName || "Khách hàng"));
+
+          // Routing Line
+          const latlngs = [
+            storeCoords,
+            [storeCoords[0], customerCoords[1]],
+            customerCoords
+          ];
+          window.L.polyline(latlngs, {color: '#007bff', weight: 4, dashArray: '5, 10'}).addTo(lMap);
+
+          // Fit Bounds
+          lMap.fitBounds([storeCoords, customerCoords], { padding: [30, 30] });
+        }
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedOrder]);
+
   const handlePickup = async (orderId) => {
     try {
       await assignOrderToShipper(orderId, Number(currentUserId));
@@ -40,8 +107,11 @@ const ShipperDashboard = () => {
     }
   };
 
-  const handleDelivered = async (orderId) => {
-    if(!window.confirm("Xác nhận bạn đã thu đủ tiền và giao hàng thành công?")) return;
+  const handleDelivered = (orderId) => {
+    setConfirmDeliveryId(orderId);
+  };
+
+  const executeDelivered = async (orderId) => {
     try {
       await updateOrderStatus(orderId, 'COMPLETED');
       showToast('Giao hàng thành công!');
@@ -173,6 +243,16 @@ const ShipperDashboard = () => {
                   {selectedOrder.note && <p className="mb-0 text-danger bg-danger-subtle p-2 rounded mt-2"><i className="fa-solid fa-circle-exclamation me-1"></i> <strong>Khách ghi chú:</strong> {selectedOrder.note}</p>}
                 </div>
 
+                <div className="mb-4">
+                  <h6 className="fw-bold mb-2"><i className="fa-solid fa-map-location-dot me-2 text-primary"></i> Bản đồ chỉ đường dự kiến:</h6>
+                  <div id="shipper-map" style={{ height: "220px", borderRadius: "12px", border: "1px solid #ddd", zIndex: 1 }}></div>
+                  <div className="d-flex justify-content-between mt-2 small text-muted">
+                    <span><i className="fa-solid fa-store text-danger"></i> Cửa hàng</span>
+                    <span className="text-primary"><i className="fa-solid fa-arrow-right-long"></i> Lộ trình: ~3.2 km</span>
+                    <span><i className="fa-solid fa-house-user text-success"></i> Khách hàng</span>
+                  </div>
+                </div>
+
                 <h6 className="fw-bold mb-3">Món khách đặt (Để đối chiếu):</h6>
                 <ul className="list-group list-group-flush mb-0">
                   {selectedOrder.items?.map((item, idx) => (
@@ -190,6 +270,28 @@ const ShipperDashboard = () => {
                 ) : selectedOrder.status === 'DELIVERING' ? (
                   <button type="button" className="btn btn-success rounded-pill px-4 fw-bold" onClick={() => handleDelivered(selectedOrder.id)}>Đã giao & Thu tiền</button>
                 ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Xác nhận giao hàng thủ công */}
+      {confirmDeliveryId && (
+        <div className="modal d-block" style={{background:"rgba(0,0,0,.5)", backdropFilter: "blur(4px)", zIndex: 1060}}>
+          <div className="modal-dialog modal-dialog-centered" style={{maxWidth: "400px"}}>
+            <div className="modal-content rounded-4 border-0 shadow-lg">
+              <div className="modal-body text-center p-4">
+                <i className="fa-solid fa-circle-question text-success mb-3" style={{fontSize: "3rem"}}></i>
+                <h5 className="fw-bold mb-2">Xác nhận giao hàng</h5>
+                <p className="text-muted small mb-4">Bạn có chắc chắn đã thu đủ tiền mặt (COD) và giao hàng thành công cho khách hàng?</p>
+                <div className="d-flex gap-2 justify-content-center">
+                  <button className="btn btn-light rounded-pill px-4" onClick={() => setConfirmDeliveryId(null)}>Hủy</button>
+                  <button className="btn btn-success rounded-pill px-4 fw-bold shadow-sm" onClick={() => {
+                    executeDelivered(confirmDeliveryId);
+                    setConfirmDeliveryId(null);
+                  }}>Xác nhận</button>
+                </div>
               </div>
             </div>
           </div>

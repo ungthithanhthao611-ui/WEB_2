@@ -69,19 +69,16 @@ function Navbar() {
 
           <div className="nav-right">
             <ul className="nav-tools d-flex align-items-center">
-              <li><Link to="/cart" className="btn-delivery position-relative">Giỏ hàng{cartCount > 0 && <span className="cart-count-badge">{cartCount}</span>}</Link></li>
-              {token && (
-                <li className="ms-3 me-2">
-                  <Link to="/notifications" className="text-dark position-relative" style={{textDecoration: "none"}}>
-                    <i className="fa-solid fa-bell fs-5"></i>
-                    {unreadCount > 0 && (
-                      <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{fontSize: "0.65rem", padding: "0.2em 0.5em"}}>
-                        {unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              )}
+              <li>
+                <Link to="/cart" className="text-dark position-relative me-3" style={{textDecoration: "none"}}>
+                  <i className="fa-solid fa-cart-shopping fs-5"></i>
+                  {cartCount > 0 && (
+                    <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style={{fontSize: "0.65rem", padding: "0.2em 0.5em"}}>
+                      {cartCount}
+                    </span>
+                  )}
+                </Link>
+              </li>
               <li>
                 <button type="button" className="account-link" onClick={handleAccount}>
                   <i className="fa-solid fa-user"></i> {token ? email || "Tài khoản" : "Tài khoản"}

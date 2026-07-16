@@ -8,6 +8,7 @@ import ProductListPage from "./pages/user/ProductListPage";
 import ProductDetailPage from "./pages/user/ProductDetailPage";
 import CartPage from "./pages/user/CartPage";
 import CheckoutPage from "./pages/user/CheckoutPage";
+import VnpayResultPage from "./pages/user/VnpayResultPage";
 import LoginPage from "./pages/user/LoginPage";
 import RegisterPage from "./pages/user/RegisterPage";
 import ForgotPasswordPage from "./pages/user/ForgotPasswordPage";
@@ -91,6 +92,14 @@ function App() {
           element={
             <ProtectedRoute>
               <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/payment/vnpay-result"
+          element={
+            <ProtectedRoute>
+              <VnpayResultPage />
             </ProtectedRoute>
           }
         />

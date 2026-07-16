@@ -13,6 +13,7 @@ function OrderHistoryPage() {
   const [complaintOrder, setComplaintOrder] = useState(null);
   const [reason, setReason] = useState("Sản phẩm bị hư hỏng");
   const [description, setDescription] = useState("");
+  const [trackingOrder, setTrackingOrder] = useState(null);
 
   const [reviewOrder, setReviewOrder] = useState(null);
   const [reviewProductId, setReviewProductId] = useState(null);
@@ -153,6 +154,110 @@ function OrderHistoryPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (trackingOrder) {
+      const timer = setTimeout(() => {
+        const container = document.getElementById("tracking-map");
+        if (container && window.L) {
+          const coordinates = {
+            "Quận 1": [10.7760, 106.7009],
+            "Quận 3": [10.7792, 106.6800],
+            "Quận 4": [10.7580, 106.7067],
+            "Quận 5": [10.7540, 106.6634],
+            "Quận 7": [10.7324, 106.7265],
+            "Quận 10": [10.7719, 106.6679],
+            "Bình Thạnh": [10.8106, 106.7091],
+            "Phú Nhuận": [10.7992, 106.6803],
+            "Tân Bình": [10.7930, 106.6556],
+            "Thủ Đức": [10.8519, 106.7719]
+          };
+
+          const district = trackingOrder.district || "Quận 1";
+          const customerCoords = coordinates[district] || [10.7760, 106.7009];
+          const storeCoords = [customerCoords[0] - 0.005, customerCoords[1] - 0.006];
+
+          // Initialize Leaflet Map
+          const lMap = window.L.map("tracking-map").setView(storeCoords, 14);
+          
+          window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+          }).addTo(lMap);
+
+          // Store Marker
+          window.L.marker(storeCoords, {
+            icon: window.L.divIcon({
+              className: 'custom-div-icon',
+              html: "<div style='background-color:#c82333; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'><i class='fa-solid fa-store'></i></div>",
+              iconSize: [30, 30],
+              iconAnchor: [15, 15]
+            })
+          }).addTo(lMap).bindPopup("Cửa hàng chuẩn bị đơn: " + (trackingOrder.store || "Highlands Coffee"));
+
+          // Customer Marker
+          window.L.marker(customerCoords, {
+            icon: window.L.divIcon({
+              className: 'custom-div-icon',
+              html: "<div style='background-color:#28a745; color:white; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);'><i class='fa-solid fa-house-user'></i></div>",
+              iconSize: [30, 30],
+              iconAnchor: [15, 15]
+            })
+          }).addTo(lMap).bindPopup("Nhà của bạn");
+
+          // Routing Line
+          const latlngs = [
+            storeCoords,
+            [storeCoords[0], customerCoords[1]],
+            customerCoords
+          ];
+          window.L.polyline(latlngs, {color: '#007bff', weight: 4, dashArray: '5, 10'}).addTo(lMap);
+
+          // Shipper Marker (moving)
+          const shipperMarker = window.L.marker(storeCoords, {
+            icon: window.L.divIcon({
+              className: 'custom-div-icon',
+              html: "<div style='background-color:#007bff; color:white; width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid white; box-shadow: 0 0 10px rgba(0,123,255,0.8);'><i class='fa-solid fa-motorcycle fa-beat'></i></div>",
+              iconSize: [35, 35],
+              iconAnchor: [17, 17]
+            })
+          }).addTo(lMap).bindPopup("Shipper đang đi giao hàng...").openPopup();
+
+          lMap.fitBounds([storeCoords, customerCoords], { padding: [30, 30] });
+
+          // Animation simulation
+          let step = 0;
+          const totalSteps = 100;
+          const interval = setInterval(() => {
+            if (step <= totalSteps) {
+              const t = step / totalSteps;
+              let currentPos;
+              if (t < 0.5) {
+                const segmentT = t * 2;
+                currentPos = [
+                  storeCoords[0] + (storeCoords[0] - storeCoords[0]) * segmentT,
+                  storeCoords[1] + (customerCoords[1] - storeCoords[1]) * segmentT
+                ];
+              } else {
+                const segmentT = (t - 0.5) * 2;
+                currentPos = [
+                  storeCoords[0] + (customerCoords[0] - storeCoords[0]) * segmentT,
+                  customerCoords[1] + (customerCoords[1] - customerCoords[1]) * segmentT
+                ];
+              }
+              shipperMarker.setLatLng(currentPos);
+              step++;
+            } else {
+              clearInterval(interval);
+              shipperMarker.bindPopup("Shipper đã tới điểm giao!").openPopup();
+            }
+          }, 150);
+
+          return () => clearInterval(interval);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [trackingOrder]);
+
   const getFilteredOrders = () => {
     if (activeTab === "ALL") return orders;
     if (activeTab === "PROCESSING") return orders.filter(o => ["PENDING_CONFIRMATION", "CONFIRMED", "PREPARING", "READY_FOR_PICKUP", "DELIVERING", "SHIPPING", "PENDING_USER_DECISION"].includes(o.status));
@@ -220,13 +325,43 @@ function OrderHistoryPage() {
                         const current = Math.max(0, statusSteps.indexOf(o.status));
                         const isActive = index <= current;
                         const isCurrent = index === current;
+                        const isDelivering = step === "DELIVERING" && (o.status === "DELIVERING" || o.status === "SHIPPING");
+                        
                         return (
                           <div className={`text-center position-relative bg-white px-1 ${isActive ? "text-danger" : "text-muted"}`} style={{zIndex: 1, flex: 1}} key={step}>
-                            <div className={`rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center shadow-sm ${isActive ? "bg-danger text-white" : "bg-light text-secondary"}`} 
-                                 style={{width: isCurrent ? "45px" : "35px", height: isCurrent ? "45px" : "35px", transition: "all 0.3s", border: isActive ? "3px solid #fff" : "none"}}>
-                              <i className={`fa-solid ${statusIcons[index]} ${isCurrent ? 'fs-5' : 'fs-6'}`}></i>
+                            {isDelivering && (
+                              <style>
+                                {`
+                                  @keyframes pulse-blue {
+                                    0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+                                    70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+                                    100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+                                  }
+                                  .shipper-pulsing {
+                                    animation: pulse-blue 1.5s infinite;
+                                    cursor: pointer !important;
+                                    border: 3px solid #007bff !important;
+                                    background-color: #007bff !important;
+                                    color: white !important;
+                                  }
+                                `}
+                              </style>
+                            )}
+                            <div className={`rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center shadow-sm ${isActive ? (isDelivering ? "shipper-pulsing" : "bg-danger text-white") : "bg-light text-secondary"}`} 
+                                 onClick={() => { if (isDelivering) setTrackingOrder(o); }}
+                                 title={isDelivering ? "Bấm vào để định vị Shipper" : ""}
+                                 style={{
+                                   width: isCurrent ? "45px" : "35px", 
+                                   height: isCurrent ? "45px" : "35px", 
+                                   transition: "all 0.3s", 
+                                   border: isActive ? (isDelivering ? "3px solid #007bff" : "3px solid #fff") : "none",
+                                   cursor: isDelivering ? "pointer" : "default"
+                                 }}>
+                              <i className={`fa-solid ${isDelivering ? "fa-motorcycle fa-beat" : statusIcons[index]} ${isCurrent ? 'fs-5' : 'fs-6'}`}></i>
                             </div>
-                            <small className={`d-block ${isActive ? "fw-bold" : ""} ${isCurrent ? "text-danger" : ""}`} style={{fontSize: "0.75rem", lineHeight: "1.2"}}>{statusLabels[index]}</small>
+                            <small className={`d-block ${isActive ? "fw-bold" : ""} ${isCurrent ? "text-danger" : ""}`} style={{fontSize: "0.75rem", lineHeight: "1.2"}}>
+                              {isDelivering ? "Định vị Shipper" : statusLabels[index]}
+                            </small>
                           </div>
                         );
                       })}
@@ -261,6 +396,7 @@ function OrderHistoryPage() {
                     <div className="row bg-light rounded-4 p-3 mx-0 mb-3">
                       <div className="col-md-8 mb-3 mb-md-0 border-end">
                         <p className="mb-3"><span className="fw-semibold text-muted">Khách hàng:</span> <span className="fw-bold">{o.user ? o.user.userName : 'Không rõ'}</span></p>
+                        {o.paymentMethod && <p className="mb-3"><span className="fw-semibold text-muted">Thanh toán:</span> <span className="fw-bold">{o.paymentMethod === 'VNPAY' ? `VNPAY (${o.paymentStatus === 'PAID' ? 'Đã thanh toán' : o.paymentStatus})` : 'Thanh toán khi nhận hàng'}</span></p>}
                         <div>
                           <span className="fw-semibold text-muted d-block mb-2">Sản phẩm:</span>
                           {o.items && o.items.length > 0 ? (
@@ -363,6 +499,40 @@ function OrderHistoryPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Định vị Shipper */}
+        {trackingOrder && (
+          <div className="modal d-block" style={{background:"rgba(0,0,0,.5)", backdropFilter: "blur(4px)", zIndex: 1050}}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content rounded-4 border-0 shadow-lg">
+                <div className="modal-header border-bottom-0 pb-0 bg-light rounded-top-4">
+                  <h5 className="modal-title fw-bold text-danger"><i className="fa-solid fa-motorcycle me-2 fa-bounce"></i> Trình theo dõi Shipper (Mô phỏng)</h5>
+                  <button type="button" className="btn-close" onClick={() => setTrackingOrder(null)}></button>
+                </div>
+                <div className="modal-body pt-4">
+                  <div className="text-center mb-3">
+                    <span className="badge bg-danger-subtle text-danger px-3 py-2 rounded-pill fw-bold">
+                      <i className="fa-solid fa-spinner fa-spin me-2"></i> Shipper đang giao hàng
+                    </span>
+                    <p className="text-muted mt-2 small">Đơn hàng #{trackingOrder.id} · Dự kiến giao tới trong 15 phút</p>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <div id="tracking-map" style={{ height: "250px", borderRadius: "12px", border: "1px solid #ddd", zIndex: 1 }}></div>
+                  </div>
+
+                  <div className="border rounded-4 p-3 bg-light-subtle">
+                    <p className="mb-2 small"><i className="fa-solid fa-location-dot me-2 text-danger"></i> <strong>Điểm giao hàng:</strong> {trackingOrder.deliveryAddress || trackingOrder.address}</p>
+                    <p className="mb-0 small"><i className="fa-solid fa-store me-2 text-warning"></i> <strong>Cửa hàng chuẩn bị:</strong> {trackingOrder.store || "Highlands Coffee"}</p>
+                  </div>
+                </div>
+                <div className="modal-footer border-top-0 pt-0 bg-light rounded-bottom-4">
+                  <button type="button" className="btn btn-danger rounded-pill px-4" onClick={() => setTrackingOrder(null)}>Đóng</button>
+                </div>
+              </div>
             </div>
           </div>
         )}

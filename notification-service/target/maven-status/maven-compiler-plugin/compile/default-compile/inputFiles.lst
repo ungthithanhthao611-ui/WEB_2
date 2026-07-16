@@ -1,2 +1,3 @@
 D:\Web2_\e-commerce-microservices\notification-service\src\main\java\com\rainbowforest\notificationservice\consumer\NotificationEventConsumer.java
+D:\Web2_\e-commerce-microservices\notification-service\src\main\java\com\rainbowforest\notificationservice\feignclient\UserClient.java
 D:\Web2_\e-commerce-microservices\notification-service\src\main\java\com\rainbowforest\notificationservice\NotificationServiceApplication.java

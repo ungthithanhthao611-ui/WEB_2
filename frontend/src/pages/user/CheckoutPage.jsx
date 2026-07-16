@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createOrder } from "../../services/orderService";
+import { createOrder, createVnpayPayment } from "../../services/orderService";
 import { getCart } from "../../services/cartService";
 import UserLayout from "../../layouts/UserLayout";
 import { getCartMeta, getSavedVoucherCodes, getShippingConfig, showToast } from "../../services/shopConfigService";
@@ -21,7 +21,10 @@ const MOCK_STORES = {
   "Tân Bình": ["Highlands Cộng Hòa - Tân Bình", "Highlands Hoàng Văn Thụ - Tân Bình"],
   "Thủ Đức": ["Highlands Võ Văn Ngân - Thủ Đức", "Highlands Gigamall - Thủ Đức"]
 };
-const payments = [["COD", "Thanh toán khi nhận hàng (COD)", "fa-money-bill-wave"]];
+const payments = [
+  ["COD", "Thanh toán khi nhận hàng (COD)", "fa-money-bill-wave"],
+  ["VNPAY", "Thanh toán bằng thẻ/Ví VNPAY", "fa-credit-card"]
+];
 
 function CheckoutPage() {
   const navigate = useNavigate();
@@ -132,7 +135,17 @@ function CheckoutPage() {
     if (!cart.length) return showToast("Giỏ hàng đang trống, vui lòng thêm sản phẩm trước.", "error");
     setLoading(true);
     try {
-      await createOrder(Number(sessionStorage.getItem("userId")), cart, { ...form, subtotal, shippingFee, discount, total, voucherCode: appliedVoucher?.code || "", cartMeta });
+      const orderResponse = await createOrder(Number(sessionStorage.getItem("userId")), cart, { ...form, subtotal, shippingFee, discount, total, voucherCode: appliedVoucher?.code || "", cartMeta });
+      const createdOrder = orderResponse.data;
+      
+      if (form.paymentMethod === "VNPAY") {
+        const vnpayRes = await createVnpayPayment(createdOrder.id);
+        if (vnpayRes.data && vnpayRes.data.paymentUrl) {
+          window.location.href = vnpayRes.data.paymentUrl;
+          return;
+        }
+      }
+      
       showToast("Đặt hàng thành công");
       navigate("/orders");
     } catch (error) {
